@@ -1,4 +1,9 @@
-## 0.0.1
+## 0.0.2(2025.1218)
+- Fix dart pub readme screenshot display issue.
+- Add virtual keyboard widget for example
+- Fix Android's game problems in example
+
+## 0.0.1(2025.1218)
 
 First public release.
 
