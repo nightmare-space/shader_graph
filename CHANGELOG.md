@@ -1,3 +1,6 @@
+## 0.0.3(2025.1218)
+- Try fix pub's readme screenshot display issue again.
+
 ## 0.0.2(2025.1218)
 - Fix dart pub readme screenshot display issue.
 - Add virtual keyboard widget for example
