@@ -163,37 +163,53 @@ class KeyboardController {
     return -1;
   }
 
-  void onKeyDown(KeyEvent event) {
-    // 防止系统重复 KeyDown
-    if (_activeKeys.containsKey(event.logicalKey)) {
-      return;
-    }
-
-    final int keyCode = toShadertoyKey(event);
-    if (keyCode < 0) return;
-
-    _activeKeys[event.logicalKey] = keyCode;
-    print('KeyDown → shaderKey=$keyCode');
+  void _keyDownByCode(int keyCode) {
+    if (keyCode < 0 || keyCode >= 256) return;
+    if (_keysDown.contains(keyCode)) return; // 防止重复
 
     _keysDown.add(keyCode);
     _pendingJustPressed.add(keyCode);
     _pendingKeyUpAtFrame.remove(keyCode);
 
-    setKey(keyCode, 0, true); // down
+    setKey(keyCode, 0, true); // row0: down
     _keyboardDirty = true;
+    hasKeyBoardInput = true;
   }
 
-  bool _keyboardDirty = false;
-  void onKeyUp(KeyEvent event, int currentFrame) {
-    final int? keyCode = _activeKeys.remove(event.logicalKey);
-    if (keyCode == null) return;
-
-    // print('KeyUp → shaderKey=$keyCode');
+  void _keyUpByCode(int keyCode, int currentFrame) {
+    if (!_keysDown.contains(keyCode)) return;
 
     // Delay clearing row0 until next rendered frame.
     _pendingKeyUpAtFrame[keyCode] = currentFrame;
     _pendingJustReleased.add(keyCode);
     _keyboardDirty = true;
+  }
+
+  void pressKey(int keyCode) {
+    _keyDownByCode(keyCode);
+  }
+
+  void releaseKey(int keyCode, int currentFrame) {
+    _keyUpByCode(keyCode, currentFrame);
+  }
+
+  void onKeyDown(KeyEvent event) {
+    if (_activeKeys.containsKey(event.logicalKey)) return;
+
+    final int keyCode = toShadertoyKey(event);
+    if (keyCode < 0) return;
+
+    _activeKeys[event.logicalKey] = keyCode;
+    _keyDownByCode(keyCode);
+  }
+
+  bool _keyboardDirty = false;
+
+  void onKeyUp(KeyEvent event, int currentFrame) {
+    final int? keyCode = _activeKeys.remove(event.logicalKey);
+    if (keyCode == null) return;
+
+    _keyUpByCode(keyCode, currentFrame);
   }
 
   void dispose() {

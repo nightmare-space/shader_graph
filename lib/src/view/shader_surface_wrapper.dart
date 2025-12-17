@@ -4,6 +4,8 @@ import 'package:shader_graph/src/shader_buffer.dart';
 import 'package:shader_graph/src/shader_graph.dart';
 import 'package:shader_graph/src/view/shader_surface.dart';
 
+import 'keyboard_controller.dart';
+
 /// 一个渲染着色器的 View，可以不用关系 ShaderGraph 的细节
 /// The ShaderSurfaceWrapper that creates a ShaderGraph.
 /// You don't need to care about the details of ShaderGraph.
@@ -14,18 +16,21 @@ class ShaderSurfaceWrapper extends StatefulWidget {
     dynamic buffer, {
     bool upSideDown = true,
     Key? key,
+    KeyboardController? keyboardController,
   }) {
     if (buffer is ShaderBuffer) {
       return ShaderSurfaceWrapper.buffers(
         [buffer..scale = 0.5],
         upSideDown: upSideDown,
         key: key,
+        keyboardController: keyboardController,
       );
     } else if (buffer is String) {
       return ShaderSurfaceWrapper.buffers(
         [buffer.shaderBuffer..scale = 0.5],
         upSideDown: upSideDown,
         key: key,
+        keyboardController: keyboardController,
       );
     } else {
       throw ArgumentError('buffer must be String or ShaderBuffer, got ${buffer.runtimeType}');
@@ -38,11 +43,13 @@ class ShaderSurfaceWrapper extends StatefulWidget {
     List<ShaderBuffer> Function() builder, {
     bool upSideDown = true,
     Key? key,
+    KeyboardController? keyboardController,
   }) {
     return ShaderSurfaceWrapper.buffers(
       builder(),
       upSideDown: upSideDown,
       key: key,
+      keyboardController: keyboardController,
     );
   }
 
@@ -52,10 +59,12 @@ class ShaderSurfaceWrapper extends StatefulWidget {
     this.buffers, {
     this.upSideDown = true,
     super.key,
+    this.keyboardController,
   });
 
   final List<ShaderBuffer> buffers;
   final bool upSideDown;
+  final KeyboardController? keyboardController;
 
   @override
   State<ShaderSurfaceWrapper> createState() => _ShaderSurfaceWrapperState();
@@ -84,32 +93,28 @@ class _ShaderSurfaceWrapperState extends State<ShaderSurfaceWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: FutureBuilder(
-            future: _graphFuture,
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final graph = snapshot.data as ShaderGraph;
-              return LayoutBuilder(builder: (context, constraints) {
-                return SizedBox(
-                  height: constraints.maxHeight,
-                  width: constraints.maxWidth,
-                  child: Transform.flip(
-                    flipY: widget.upSideDown,
-                    child: ShaderSurface(
-                      graph: graph,
-                    ),
-                  ),
-                );
-              });
-            },
-          ),
-        ),
-      ],
+    return FutureBuilder(
+      future: _graphFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          // TODO: Support custom loading widget
+          return const Center(child: CircularProgressIndicator());
+        }
+        final graph = snapshot.data as ShaderGraph;
+        return LayoutBuilder(builder: (context, constraints) {
+          return SizedBox(
+            height: constraints.maxHeight,
+            width: constraints.maxWidth,
+            child: Transform.flip(
+              flipY: widget.upSideDown,
+              child: ShaderSurface(
+                graph: graph,
+                keyboardController: widget.keyboardController,
+              ),
+            ),
+          );
+        });
+      },
     );
   }
 }
