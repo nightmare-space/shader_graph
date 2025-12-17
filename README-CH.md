@@ -16,59 +16,26 @@
 
 ### 示例
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="screenshot/IFrame.png" width="240" />
-      <br />IFrame
-    </td>
-    <td align="center">
-      <img src="screenshot/Mac%20Wallpaper.png" width="240" />
-      <br />Mac Wallpaper
-    </td>
-    <td align="center">
-      <img src="screenshot/Noise%20Lab.png" width="240" />
-      <br />Noise Lab
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="screenshot/Text.png" width="240" />
-      <br />Text
-    </td>
-    <td></td>
-    <td></td>
-  </tr>
-</table>
+|                                  |                                                  |                                          |
+| -------------------------------- | ------------------------------------------------ | ---------------------------------------- |
+| ![IFrame](screenshot/IFrame.png) | ![Mac Wallpaper](screenshot/Mac%20Wallpaper.png) | ![Noise Lab](screenshot/Noise%20Lab.png) |
+| IFrame                           | Mac Wallpaper                                    | Noise Lab                                |
+| ![Text](screenshot/Text.png)     |                                                  |                                          |
+| Text                             |                                                  |                                          |
 
 ### 游戏
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="screenshot/Bricks%20Game.png" width="240" />
-      <br />Bricks Game
-    </td>
-    <td align="center">
-      <img src="screenshot/Pacman%20Game.png" width="240" />
-      <br />Pacman Game
-    </td>
-    <td></td>
-  </tr>
-</table>
+|                                              |                                              |     |
+| -------------------------------------------- | -------------------------------------------- | --- |
+| ![Bricks Game](screenshot/Bricks%20Game.png) | ![Pacman Game](screenshot/Pacman%20Game.png) |     |
+| Bricks Game                                  | Pacman Game                                  |     |
 
 ### Float
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="screenshot/Float%20Test.png" width="240" />
-      <br />Float Test
-    </td>
-    <td></td>
-    <td></td>
-  </tr>
-</table>
+|                                            |     |     |
+| ------------------------------------------ | --- | --- |
+| ![Float Test](screenshot/Float%20Test.png) |     |     |
+| Float Test                                 |     |     |
 
 
 ## Features
