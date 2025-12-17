@@ -48,18 +48,36 @@ vec2 sg_physicalSize(vec2 virtualSize) {
 // --- packing (no bit ops) ---
 // v01 in [0,1] -> RGB
 vec3 sg_pack01ToRGB(float v01) {
-    // 避免 v==1.0 时 fract() 回绕到 0.0
-    float v = clamp(v01, 0.0, 1.0 - (1.0 / 16581375.0));
-    vec3 enc = fract(v * vec3(1.0, 255.0, 65025.0));
-    enc -= enc.yzz * vec3(1.0 / 255.0, 1.0 / 255.0, 0.0);
-    return enc;
+    // IMPORTANT: Use a true 24-bit (base-256) mapping.
+    // Each channel stores an integer byte in [0..255] as (byte/255).
+    // We avoid large multipliers like 65025/16581375 that can amplify precision
+    // issues on some mobile GPUs.
+    float v = clamp(v01, 0.0, 1.0 - (1.0 / 16777216.0));
+
+    float x = floor(v * 256.0);
+    v = v * 256.0 - x;
+    float y = floor(v * 256.0);
+    v = v * 256.0 - y;
+    float z = floor(v * 256.0);
+
+    return vec3(x, y, z) / 255.0;
 }
 
 float sg_unpack01FromRGB(vec3 rgb) {
-    return dot(rgb, vec3(1.0, 1.0 / 255.0, 1.0 / 65025.0));
+    // Recover bytes and reconstruct v01 in [0..1) using a base-256 fraction:
+    //   v01 = x/256 + y/256^2 + z/256^3
+    // This avoids large (1.6e7) integer-like multipliers that can lose precision
+    // on some mobile GPUs.
+    vec3 c = floor(rgb * 255.0 + 0.5);
+    return clamp(
+        c.x / 256.0 + c.y / 65536.0 + c.z / 16777216.0,
+        0.0,
+        1.0
+    );
 }
 
 vec4 sg_packSigned(float vSigned) {
+    vSigned = clamp(vSigned, -1.0, 1.0);
     float v01 = vSigned * 0.5 + 0.5;
     return vec4(sg_pack01ToRGB(v01), 1.0);
 }
@@ -71,7 +89,12 @@ float sg_unpackSigned(vec4 rgba) {
 
 // --- texel-like fetch (nearest at pixel center) ---
 vec4 sg_fetchRaw(ivec2 ipos, vec2 sizePx) {
-    return texture(SG_FEEDBACK_TEX, (vec2(ipos) + 0.5) / sizePx);
+    // Sample at texel centers. Some mobile GPUs (or fast-math paths) can
+    // introduce tiny UV errors that cause linear filtering to mix neighbors.
+    // Snap UV back to the nearest texel center to keep packed state stable.
+    vec2 uv = (vec2(ipos) + 0.5) / sizePx;
+    uv = (floor(uv * sizePx) + 0.5) / sizePx;
+    return texture(SG_FEEDBACK_TEX, uv);
 }
 
 // --- load virtual texel (vec4) from expanded physical texture ---

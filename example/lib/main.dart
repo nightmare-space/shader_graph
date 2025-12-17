@@ -6,7 +6,7 @@ import 'float_support.dart';
 import 'iframe_view.dart';
 import 'mouse_view.dart';
 import 'multi_pass.dart';
-import 'pacman_game.dart';
+import 'game/pacman_game.dart';
 import 'text_render.dart';
 
 void main() async {
@@ -62,29 +62,45 @@ class _RootPageState extends State<RootPage> {
     return CupertinoPageScaffold(
       backgroundColor: Color(0xfff3f5f9),
       navigationBar: CupertinoNavigationBar(
-        middle: CupertinoSlidingSegmentedControl<int>(
-          groupValue: currentIndex,
-          onValueChanged: (int? value) {
-            if (value != null) {
-              currentIndex = value;
-              setState(() {});
-            }
-          },
-          children: {
-            for (var i = 0; i < tabs.length; i++) i: tabs[i],
-          },
+        middle: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: CupertinoSlidingSegmentedControl(
+            // isMomentary: true,
+            // proportionalWidth: true,
+            groupValue: currentIndex,
+            onValueChanged: (int? value) {
+              if (value != null) {
+                currentIndex = value;
+                setState(() {});
+              }
+            },
+            children: {
+              for (var i = 0; i < tabs.length; i++) i: tabs[i],
+            },
+          ),
         ),
       ),
       child: Center(
-        child: const [
-          BricksGame(),
-          PacmanGame(),
-          TextRender(),
-          IframeView(),
-          MacWallpaperView(),
-          FloatTest(),
-          MouseView(),
-        ][currentIndex],
+        child: LayoutBuilder(builder: (context, constraints) {
+          double width = constraints.maxWidth;
+          double height = constraints.maxHeight;
+          if (width < 400 && currentIndex != 0 && currentIndex != 1) {
+            height = width * 0.75;
+          }
+          return SizedBox(
+            width: width,
+            height: height,
+            child: const [
+              BricksGame(),
+              PacmanGame(),
+              TextRender(),
+              IframeView(),
+              MacWallpaperView(),
+              FloatTest(),
+              MouseView(),
+            ][currentIndex],
+          );
+        }),
       ),
     );
   }
