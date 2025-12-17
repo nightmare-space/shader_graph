@@ -19,9 +19,11 @@ class ShaderSurface extends StatefulWidget {
   const ShaderSurface({
     super.key,
     required this.graph,
+    this.keyboardController,
   });
 
   final ShaderGraph graph;
+  final KeyboardController? keyboardController;
 
   @override
   State<ShaderSurface> createState() => _ShaderSurfaceState();
@@ -32,12 +34,18 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
   Duration _elapsed = Duration.zero;
   RenderShaderSurface? _renderObject;
   final FocusNode _focusNode = FocusNode();
-  KeyboardController keyboardController = KeyboardController();
+  late final KeyboardController keyboardController = widget.keyboardController ?? KeyboardController();
 
   /// 首帧已经渲染了
   /// Whether the first frame has been presented
   bool firstFramePresented = false;
   bool canTick = true;
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    canTick = true;
+  }
 
   @override
   void initState() {
@@ -90,7 +98,7 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
     if (!firstFramePresented) firstFramePresented = true;
     canTick = true;
     // Advance keyboard one-frame pulses exactly once per presented frame.
-    keyboardController.pumpKeyboardFrame(_renderObject!.iFrame);
+    keyboardController.pumpKeyboardFrame(renderedIFrame);
   }
 
   @override
@@ -138,15 +146,17 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
 
         behavior: HitTestBehavior.translucent,
         // TODO: RepaintBoundary
-        child: ShaderSurfaceRenderObject(
-          graph: widget.graph,
-          dpr: MediaQuery.devicePixelRatioOf(context),
-          onRenderObjectCreated: (ro) {
-            _renderObject = ro;
-            // Start at frame 0; subsequent frames advance only when a render completes.
-            ro.iFrame = 0;
-          },
-          onFramePresented: _onFramePresented,
+        child: RepaintBoundary(
+          child: ShaderSurfaceRenderObject(
+            graph: widget.graph,
+            dpr: MediaQuery.devicePixelRatioOf(context),
+            onRenderObjectCreated: (ro) {
+              _renderObject = ro;
+              // Start at frame 0; subsequent frames advance only when a render completes.
+              ro.iFrame = 0;
+            },
+            onFramePresented: _onFramePresented,
+          ),
         ),
       ),
     );
