@@ -61,16 +61,22 @@ class _FloatTestState extends State<FloatTest> {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final maxW = staticGridMaxWidth;
-                  final gridW = (constraints.maxWidth.isFinite ? constraints.maxWidth : maxW).clamp(0.0, maxW);
+                  final availableW = constraints.maxWidth.isFinite ? constraints.maxWidth : maxW;
+                  // On phones, the grid is too narrow and text won't fit.
+                  // Keep a fixed grid width and allow horizontal scrolling.
+                  final gridW = availableW < maxW ? maxW : availableW.clamp(0.0, maxW);
                   final cellH = staticGridCellHeight;
                   final gridH = cellH * virtualHeight;
 
                   return Align(
                     alignment: Alignment.topCenter,
-                    child: SizedBox(
-                      width: gridW,
-                      height: gridH,
-                      child: CustomPaint(painter: painter),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(
+                        width: gridW,
+                        height: gridH,
+                        child: CustomPaint(painter: painter),
+                      ),
                     ),
                   );
                 },
@@ -142,7 +148,9 @@ class _Vec4GridPainter extends CustomPainter {
         canvas.drawRect(rect, fill);
         canvas.drawRect(rect, grid);
 
-        if (cellW < 70 || cellH < 40) continue;
+        // On small screens, cells can be narrow. Still render text with
+        // smaller fonts so the data is visible.
+        if (cellW < 28 || cellH < 20) continue;
 
         double laneValue(int laneIndex) {
           final px = vx * 4 + laneIndex;
@@ -160,7 +168,7 @@ class _Vec4GridPainter extends CustomPainter {
             'z: ${_fmtSigned(z)}\nw: ${_fmtSigned(w)}';
         // Tuned for compact cells (e.g. 48px height)
         // 字体大小限制到 9-16 之间
-        final fontSize = (cellH * 0.30).clamp(9.0, 16.0);
+        final fontSize = (cellH * 0.30).clamp(7.0, 16.0);
 
         textPainter.text = TextSpan(
           text: text,

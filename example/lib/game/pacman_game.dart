@@ -1,20 +1,26 @@
+import 'dart:math';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shader_graph/shader_graph.dart';
 
-const int KEY_LEFT = 37;
-const int KEY_RIGHT = 39;
-
-class BricksGame extends StatefulWidget {
-  const BricksGame({super.key});
+class PacmanGame extends StatefulWidget {
+  const PacmanGame({super.key});
 
   @override
-  State<BricksGame> createState() => _BricksGameState();
+  State<PacmanGame> createState() => _PacmanGameState();
 }
 
-class _BricksGameState extends State<BricksGame> {
+class _PacmanGameState extends State<PacmanGame> {
   KeyboardController keyboardController = KeyboardController();
+  late final List<int> _order;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = [0, 1, 2]..shuffle(Random(DateTime.now().microsecondsSinceEpoch));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -31,12 +37,16 @@ class _BricksGameState extends State<BricksGame> {
             height: height,
             child: ShaderSurfaceWrapper.builder(
               () {
-                final bufferA = 'shaders/game_ported/Bricks Game BufferA.frag'.feedback().feedKeyboard();
-                final mainBuffer = 'shaders/game_ported/Bricks Game.frag'.feedShaderBuffer(bufferA);
-                // Standard scheme: physical width = virtual * 4
-                bufferA.fixedOutputSize = const Size(14 * 4.0, 14);
+                final bufferA = 'shaders/game_ported/Pacman Game BufferA.frag'.shaderBuffer;
+                final bufferB = 'shaders/game_ported/Pacman Game BufferB.frag'.shaderBuffer;
+                final mainBuffer = 'shaders/game_ported/Pacman Game.frag'.shaderBuffer;
+                bufferA.fixedOutputSize = const Size(32 * 4.0, 32);
+                bufferA.feedback().feedKeyboard();
+                bufferB.feedShader(bufferA);
+                mainBuffer.feedShader(bufferA).feedShader(bufferB);
 
-                return [bufferA, mainBuffer];
+                final buffers = [bufferA, bufferB, mainBuffer];
+                return _order.map((i) => buffers[i]).toList(growable: false);
               },
               keyboardController: keyboardController,
             ),
