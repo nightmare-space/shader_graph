@@ -1,10 +1,15 @@
 void main() {
-    // 保留uniform变量，防止着色器编译器优化移除它们
-    // 使用更简洁的方式：确保每个uniform至少被访问一次
-    float unused = iFrame + iMouse.x + iTime + iResolution.x;
-    
+    // Keep uniforms alive to prevent the compiler from removing them.
+    // IMPORTANT: Do NOT use `u/u` or any expression that perturbs `fragCoord`.
+    // On some mobile GPUs (mediump / fast-math), `u/u` may not be exactly 1.0
+    // and can even produce NaNs, causing frame-to-frame pixel coordinate drift.
+    float keep = iFrame + iMouse.x + iTime + iResolution.x;
+
     vec2 fragCoord = FlutterFragCoord().xy;
-    
-    // 只在必要时才使用unused变量，避免条件判断
-    mainImage(fragColor, fragCoord * (unused / unused));
+    mainImage(fragColor, fragCoord);
+
+    // Never true in practice, but depends on a uniform so it won't be optimized away.
+    if (keep < -1e20) {
+        fragColor += vec4(keep);
+    }
 }
