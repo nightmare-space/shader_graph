@@ -1,0 +1,47 @@
+name: example
+description: "A new Flutter project."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  shader_graph:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/Wall.jpg
+    - assets/codepage12.png
+  shaders:
+    - shaders/frame/IFrame Test.frag
+    - shaders/mouse/IMouse Test.frag
+    - shaders/mouse/Noise Lab (3D).frag
+    # keyboard
+    - shaders/keyboard/Keyboard Debug Overlay.frag
+    - shaders/keyboard/Keyboard Test.frag
+    # game
+    - shaders/game_ported/Bricks Game.frag
+    - shaders/game_ported/Bricks Game BufferA.frag
+    - shaders/game_ported/Bricks Game BufferB.frag
+    - shaders/game_ported/Pacman Game.frag
+    - shaders/game_ported/Pacman Game BufferA.frag
+    - shaders/game_ported/Pacman Game BufferB.frag
+    # text
+    - shaders/text/Text Texture.frag
+    # multi-pass
+    - shaders/multi_pass/MacOS Monterey wallpaper.frag
+    - shaders/multi_pass/MacOS Monterey wallpaper BufferA.frag
+    - shaders/multi_pass/Static Vec4 Grid A.frag
