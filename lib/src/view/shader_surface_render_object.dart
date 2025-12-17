@@ -181,13 +181,14 @@ class ShaderSurfaceLayer extends OffsetLayer {
         _rendering = false;
         onFramePresented?.call(iFrame.toInt());
       } else {
-        final future = graph.renderFrame(data: data);
-        future.then((mainImg) {
-          if (mainImg != null) {
-            // Only advance logical frame when a render has actually produced an image.
-            onFramePresented?.call(iFrame.toInt());
-            _rendering = false;
-          }
+        graph.renderFrame(data: data).catchError((_) {
+          // Swallow render errors here so we can keep the scheduler alive.
+          // The last frame (if any) will remain on screen.
+          return null;
+        }).whenComplete(() {
+          _rendering = false;
+          // Release the next tick even if this render produced no image.
+          onFramePresented?.call(iFrame.toInt());
         });
       }
     }
