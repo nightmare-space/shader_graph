@@ -1,14 +1,10 @@
 // ignore_for_file: avoid_print
-
-import 'dart:async';
-import 'dart:ui' as ui;
-import 'package:shader_graph/src/foundation/render_data.dart';
-import 'package:shader_graph/src/shader_buffer.dart';
+part of 'package:shader_graph/shader_graph.dart';
 
 class ShaderGraph {
-  ShaderGraph(this.buffers);
+  ShaderGraph(this._buffers);
 
-  final List<ShaderBuffer> buffers;
+  final List<ShaderBuffer> _buffers;
   late final List<ShaderBuffer> _orderedBuffers;
   void _buildExecutionOrder() {
     final visited = <ShaderBuffer>{};
@@ -27,7 +23,7 @@ class ShaderGraph {
       visiting.add(node);
 
       // 递归访问非自身的依赖
-      for (final dep in node.dependencies) {
+      for (final dep in node._dependencies) {
         if (dep != node) {
           visit(dep);
         }
@@ -39,14 +35,14 @@ class ShaderGraph {
     }
 
     // 尝试拓扑排序
-    for (final node in buffers) {
+    for (final node in _buffers) {
       visit(node);
     }
 
     // 如果有循环依赖，直接使用 buffers 列表的原始顺序
     if (hasCycle) {
       print('⚠️ Cycle detected! Using buffers list order instead of topological sort');
-      _orderedBuffers = buffers;
+      _orderedBuffers = _buffers;
     } else {
       _orderedBuffers = result;
     }
@@ -58,14 +54,14 @@ class ShaderGraph {
   }
 
   Future<void> init() async {
-    for (final node in buffers) {
+    for (final node in _buffers) {
       await node.init();
     }
 
     _buildExecutionOrder();
   }
 
-  Future<ui.Image?> renderFrame({required RenderData data}) async {
+  Future<ui.Image?> _renderFrame({required RenderData data}) async {
     // --- 关键点：反馈语义（Shadertoy 风格） ---
     // 任意标记为 `usePreviousFrame` 的输入必须采样上一帧的输出。
     // 如果我们在每个节点的 render() 结束时推进 prevOutput，那么在
@@ -82,19 +78,19 @@ class ShaderGraph {
     // Fix: advance feedback for ALL buffers once at the start of the frame,
     // before resolving any shader inputs.
     for (final node in _orderedBuffers) {
-      node.beginFrame();
+      node._beginFrame();
     }
     for (final node in _orderedBuffers) {
-      await node.render(data: data);
+      await node._render(data: data);
     }
 
-    return mainNode.output ?? mainNode.prevOutput;
+    return mainNode._output ?? mainNode._prevOutput;
   }
 
-  void renderFrameSync({required RenderData data}) {
+  void _renderFrameSync({required RenderData data}) {
     // Same as renderFrame(): keep usePreviousFrame stable & order-independent.
     for (final node in _orderedBuffers) {
-      node.beginFrame();
+      node._beginFrame();
     }
     for (final node in _orderedBuffers) {
       node.renderSync(data: data);
@@ -104,7 +100,7 @@ class ShaderGraph {
   ShaderBuffer get mainNode => _orderedBuffers.last;
 
   void dispose() {
-    for (final node in buffers) {
+    for (final node in _buffers) {
       node.dispose();
     }
   }
