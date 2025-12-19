@@ -1,7 +1,4 @@
-import 'dart:ui' as ui;
-import 'package:flutter/services.dart';
-
-import 'shader_buffer.dart';
+part of 'package:shader_graph/shader_graph.dart';
 
 abstract class ShaderInput {
   ui.Image? resolve();
@@ -19,7 +16,7 @@ class ShaderBufferInput extends ShaderInput {
   /// For feedback input, choose to use the output texture from the previous frame.
   @override
   ui.Image? resolve() {
-    return usePreviousFrame ? buffer.prevOutput : buffer.output;
+    return usePreviousFrame ? buffer._prevOutput : buffer._output;
   }
 }
 
