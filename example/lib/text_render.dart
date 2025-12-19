@@ -6,7 +6,7 @@ class TextRender extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ShaderSurfaceWrapper.builder(
+    return ShaderSurface.builder(
       () {
         final mainBuffer = 'shaders/text/Text Texture.frag'.shaderBuffer;
         mainBuffer.feedImageFromAsset('assets/codepage12.png');

@@ -14,10 +14,6 @@ void main() async {
   runApp(MaterialApp(home: Scaffold(body: MyApp())));
 }
 
-// void main() {
-//   runApp(const MyApp());
-// }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -80,28 +76,26 @@ class _RootPageState extends State<RootPage> {
           ),
         ),
       ),
-      child: Center(
-        child: LayoutBuilder(builder: (context, constraints) {
-          double width = constraints.maxWidth;
-          double height = constraints.maxHeight;
-          if (width < 400 && currentIndex != 0 && currentIndex != 1) {
-            height = width * 0.75;
-          }
-          return SizedBox(
-            width: width,
-            height: height,
-            child: const [
-              BricksGame(),
-              PacmanGame(),
-              TextRender(),
-              IframeView(),
-              MacWallpaperView(),
-              FloatTest(),
-              MouseView(),
-            ][currentIndex],
-          );
-        }),
-      ),
+      child: LayoutBuilder(builder: (context, constraints) {
+        double width = constraints.maxWidth;
+        double height = constraints.maxHeight;
+        if (width < 400 && currentIndex != 0 && currentIndex != 1) {
+          height = width * 0.75;
+        }
+        return SizedBox(
+          width: width,
+          height: height,
+          child: const [
+            BricksGame(),
+            PacmanGame(),
+            TextRender(),
+            IframeView(),
+            MacWallpaperView(),
+            FloatTest(),
+            MouseView(),
+          ][currentIndex],
+        );
+      }),
     );
   }
 }

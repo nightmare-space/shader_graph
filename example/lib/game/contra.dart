@@ -6,7 +6,7 @@ class ContraGame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ShaderSurfaceWrapper.builder(
+    return ShaderSurface.builder(
       () {
         final bufferA = 'shaders/game_ported/Contra BufferA.frag'.shaderBuffer;
         final bufferB = 'shaders/game_ported/Contra BufferB.frag'.shaderBuffer;
