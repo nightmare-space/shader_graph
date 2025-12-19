@@ -1,3 +1,5 @@
+part of 'package:shader_graph/shader_graph.dart';
+
 class IMouse {
   IMouse(this.x, this.y, this.z, this.w);
   double x, y, z, w;

@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
-
-import 'mouse.dart';
+part of 'package:shader_graph/shader_graph.dart';
 
 /// 简单的数据类
 /// A simple data class
