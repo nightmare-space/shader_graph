@@ -1,12 +1,4 @@
-import 'dart:async';
-import 'dart:developer';
-
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:shader_graph/shader_graph.dart';
-import 'dart:ui' as ui;
-import 'foundation/render_data.dart';
-import 'shader_input.dart';
+part of 'package:shader_graph/shader_graph.dart';
 
 class ShaderBuffer extends ChangeNotifier {
   ShaderBuffer(
@@ -16,7 +8,12 @@ class ShaderBuffer extends ChangeNotifier {
     this.fixedOutputSize,
   });
 
+  /// 着色器资源路径，不知道 Flutter 什么时候可以支持用 File 对象加载着色器
+  /// Shader asset path. Not sure when Flutter will support loading shaders from File objects.
   final String shaderAssetPath;
+
+  /// 缩放比例，可以以更低的分辨率渲染以提升性能
+  /// Scale factor, can render at lower resolution for better performance
   double scale;
   final String? name;
 
@@ -41,16 +38,88 @@ class ShaderBuffer extends ChangeNotifier {
   /// `fixedOutputSize` (common for Shadertoy-style state buffers).
   bool useSurfaceSizeForIResolution = false;
 
-  ui.FragmentProgram? _program;
   ui.FragmentShader? _shader;
 
   ui.Image? _output;
   ui.Image? _prevOutput;
-  ui.Image? blankImage;
-  ui.Image? get output => _output;
-  ui.Image? get prevOutput => _prevOutput;
+  ui.Image? _blankImage;
+  ByteData? frameData;
+  bool _isDisposed = false;
+  bool get isDisposed => _isDisposed;
 
-  final List<ShaderInput> inputs = [];
+  final List<ShaderInput> _inputs = [];
+
+  /// 添加一个 ShaderBuffer 作为输入，对应 shader 里的 iChannelN
+  /// Adding a ShaderBuffer as input, corresponding to iChannelN in the shader
+  ShaderBuffer feedShader(ShaderBuffer buffer) {
+    _inputs.add(ShaderBufferInput(buffer));
+    return this;
+  }
+
+  /// 添加一个 ShaderBuffer 作为输入资源，从 assetPath 加载，对应 shader 里的 iChannelN
+  /// Adding a ShaderBuffer as input resource, loading from assetPath,
+  /// corresponding to iChannelN in the shader
+  ShaderBuffer feedShaderFromAsset(String assetPath) {
+    _inputs.add(ShaderBufferInput(ShaderBuffer(assetPath)));
+    return this;
+  }
+
+  /// 添加一个图片资源作为输入，从 assetPath 加载，对应 shader 里的 iChannelN
+  /// Adding an image resource as input, loading from assetPath,
+  /// corresponding to iChannelN in the shader
+  ShaderBuffer feedImageFromAsset(String assetPath) {
+    _inputs.add(AssetInput(assetPath: assetPath));
+    return this;
+  }
+
+  /// 添加一个键盘输入作为输入，对应 shader 里的 iChannelN
+  /// Adding a keyboard input as input, corresponding to iChannelN in the shader
+  ShaderBuffer feedKeyboard() {
+    _inputs.add(KeyboardInput());
+    return this;
+  }
+
+  /// 添加反馈输入，对应 shader 里的 iChannelN
+  /// Adding a feedback input, corresponding to iChannelN in the shader
+  ShaderBuffer feedback() {
+    _inputs.add(ShaderBufferInput(this, usePreviousFrame: true));
+    return this;
+  }
+
+  /// 为了测试
+  /// For testing
+  ShaderBuffer feedEmpty() {
+    _inputs.add(EmptyInput());
+    return this;
+  }
+
+  /// 初始化着色器，如果使用 ShaderBufferWrapper 可以不需要手动调用
+  /// Initialize the shader. If using ShaderBufferWrapper, manual invocation is not required.
+  Future<void> init() async {
+    try {
+      ui.FragmentProgram program = await ui.FragmentProgram.fromAsset(shaderAssetPath);
+      _shader = program.fragmentShader();
+    } catch (e) {
+      log('Error loading shader program from $shaderAssetPath: $e');
+      throw Exception('Failed to load shader program from $shaderAssetPath: $e');
+    }
+    try {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+
+      // 绘制一个 16x16 的黑色矩形
+      canvas.drawRect(
+        const Rect.fromLTWH(0, 0, 16, 16),
+        Paint()..color = const Color(0xFF000000),
+      );
+
+      final picture = pictureRecorder.endRecording();
+      _blankImage = await picture.toImage(16, 16);
+      picture.dispose();
+    } on Exception catch (e) {
+      debugPrint('Cannot load blankImage! $e');
+    }
+  }
 
   /// 在每一帧开始时推进一次 feedback 链：
   /// prevOutput <- output
@@ -72,85 +141,12 @@ class ShaderBuffer extends ChangeNotifier {
   /// Previously, _prevOutput was advanced in render(), which caused some shaders
   /// in the same frame to receive current inputs, while feedback for BufferX->BufferX
   /// requires a PingPong mechanism, like table tennis.
-  void beginFrame() {
+  void _beginFrame() {
     _prevOutput?.dispose();
     _prevOutput = _output;
   }
 
-  /// 添加一个 ShaderBuffer 作为输入，对应 shader 里的 iChannelN
-  /// Adding a ShaderBuffer as input, corresponding to iChannelN in the shader
-  ShaderBuffer feedShader(ShaderBuffer buffer) {
-    inputs.add(ShaderBufferInput(buffer));
-    return this;
-  }
-
-  /// 添加一个 ShaderBuffer 作为输入资源，从 assetPath 加载，对应 shader 里的 iChannelN
-  /// Adding a ShaderBuffer as input resource, loading from assetPath,
-  /// corresponding to iChannelN in the shader
-  ShaderBuffer feedShaderFromAsset(String assetPath) {
-    inputs.add(ShaderBufferInput(ShaderBuffer(assetPath)));
-    return this;
-  }
-
-  /// 添加一个图片资源作为输入，从 assetPath 加载，对应 shader 里的 iChannelN
-  /// Adding an image resource as input, loading from assetPath,
-  /// corresponding to iChannelN in the shader
-  ShaderBuffer feedImageFromAsset(String assetPath) {
-    inputs.add(AssetInput(assetPath: assetPath));
-    return this;
-  }
-
-  /// 添加一个键盘输入作为输入，对应 shader 里的 iChannelN
-  /// Adding a keyboard input as input, corresponding to iChannelN in the shader
-  ShaderBuffer feedKeyboard() {
-    inputs.add(KeyboardInput());
-    return this;
-  }
-
-  /// 添加反馈输入，对应 shader 里的 iChannelN
-  /// Adding a feedback input, corresponding to iChannelN in the shader
-  ShaderBuffer feedback() {
-    inputs.add(ShaderBufferInput(this, usePreviousFrame: true));
-    return this;
-  }
-
-  /// 为了测试
-  /// For testing
-  ShaderBuffer feedEmpty() {
-    inputs.add(EmptyInput());
-    return this;
-  }
-
-  /// 初始化着色器，如果使用 ShaderBufferWrapper 可以不需要手动调用
-  /// Initialize the shader. If using ShaderBufferWrapper, manual invocation is not required.
-  Future<void> init() async {
-    try {
-      _program = await ui.FragmentProgram.fromAsset(shaderAssetPath);
-      _shader = _program!.fragmentShader();
-    } catch (e) {
-      log('Error loading shader program from $shaderAssetPath: $e');
-      throw Exception('Failed to load shader program from $shaderAssetPath: $e');
-    }
-    try {
-      final pictureRecorder = ui.PictureRecorder();
-      final canvas = Canvas(pictureRecorder);
-
-      // 绘制一个 16x16 的黑色矩形
-      canvas.drawRect(
-        const Rect.fromLTWH(0, 0, 16, 16),
-        Paint()..color = const Color(0xFF000000),
-      );
-
-      final picture = pictureRecorder.endRecording();
-      blankImage = await picture.toImage(16, 16);
-      picture.dispose();
-    } on Exception catch (e) {
-      debugPrint('Cannot load blankImage! $e');
-    }
-  }
-
-  ByteData? byteData;
-  Future<void> render({required RenderData data}) async {
+  Future<void> _render({required RenderData data}) async {
     if (_shader == null) return;
 
     final realSize = fixedOutputSize ?? (data.logicalSize * data.dpr * scale);
@@ -159,7 +155,12 @@ class ShaderBuffer extends ChangeNotifier {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final paint = Paint();
-    paint.shader = _shader;
+    try {
+      paint.shader = _shader;
+    } catch (e) {
+      log('Error applying shader for $shaderAssetPath: $e');
+      throw Exception('Failed to apply shader for $shaderAssetPath: $e');
+    }
     paint.filterQuality = FilterQuality.none;
 
     canvas.drawRect(Offset.zero & realSize, paint);
@@ -169,7 +170,7 @@ class ShaderBuffer extends ChangeNotifier {
     // `toByteData()` is an expensive GPU->CPU readback. Only do it when
     // somebody is actually listening (e.g. debug UI like Data Grid).
     if (hasListeners) {
-      byteData = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
+      frameData = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
     }
     picture.dispose();
 
@@ -204,6 +205,7 @@ class ShaderBuffer extends ChangeNotifier {
     final img = picture.toImageSync(realSize.width.ceil(), realSize.height.ceil());
 
     picture.dispose();
+    // 这里不能把 _output dispose 掉，下一帧还需呀把这个作为 prevOutput 使用
     // prevOutput 的推进由 beginFrame() 统一处理（每帧一次）。
     // 这里保留旧代码（注释）便于对照：
     // _prevOutput?.dispose();
@@ -249,20 +251,19 @@ class ShaderBuffer extends ChangeNotifier {
     // print('Setup uniforms took: ${stopwatch.elapsedMicroseconds} µs');
     int samplerIndex = 0;
     try {
-      for (final input in inputs) {
+      for (final input in _inputs) {
         final image = input.resolve();
         if (image == null) {
           // 在 Ping-Pong 反馈场景下，第一帧是没有 prevOutput 的，此时传入一个空白图像
           // 并且大部分 Ping-Pong 的代码中，基本都会对第一帧做特殊处理
           // In Ping-Pong feedback scenarios, the first frame has no prevOutput,
           // so we pass in a blank image. Most Ping-Pong code handles the first frame specially.
-          if (blankImage != null) {
-            _shader!.setImageSampler(samplerIndex, blankImage!);
+          if (_blankImage != null) {
+            _shader!.setImageSampler(samplerIndex, _blankImage!);
             samplerIndex++;
           }
           continue;
         }
-
         _shader!.setImageSampler(samplerIndex, image);
         samplerIndex++;
       }
@@ -272,29 +273,24 @@ class ShaderBuffer extends ChangeNotifier {
     }
   }
 
-  Iterable<ShaderBuffer> get dependencies sync* {
-    for (final input in inputs) {
+  /// 只需要返回着色器的输入，用来构建依赖图
+  /// Only need to return shader inputs, used to build the dependency graph
+  Iterable<ShaderBuffer> get _dependencies sync* {
+    for (final input in _inputs) {
       if (input is ShaderBufferInput) {
         yield input.buffer;
       }
     }
   }
 
-  void disposeImages() {
+  @override
+  void dispose() {
     _output?.dispose();
     _prevOutput?.dispose();
     _output = null;
     _prevOutput = null;
-  }
-
-  bool _isDisposed = false;
-  bool get isDisposed => _isDisposed;
-
-  @override
-  void dispose() {
-    disposeImages();
-    blankImage?.dispose();
-    blankImage = null;
+    _blankImage?.dispose();
+    _blankImage = null;
     _isDisposed = true;
     super.dispose();
   }
