@@ -6,15 +6,14 @@ class IframeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ShaderSurfaceWrapper.builder(
+    return ShaderSurface.builder(
       () {
         final sourceBuffer = 'shaders/frame/IFrame Test.frag'.shaderBuffer;
         final overlayBuffer = 'shaders/keyboard/Keyboard Debug Overlay.frag'.shaderBuffer;
-        // iChannel0 = 源着色器输出
-        overlayBuffer.feedShader(sourceBuffer);
-        // iChannel1 = 键盘输入
+        // iFrame
+        // TODO: Macos haven't progress display, but Android can
+        overlayBuffer.feed(sourceBuffer);
         overlayBuffer.feedKeyboard();
-
         return [sourceBuffer, overlayBuffer];
       },
       key: const ValueKey('iframe'),

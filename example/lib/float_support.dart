@@ -35,7 +35,7 @@ class _FloatTestState extends State<FloatTest> {
         // Ensure the shader is rendered so byteData becomes available.
         SizedBox(
           height: 120,
-          child: ShaderSurfaceWrapper.builder(
+          child: ShaderSurface.builder(
             () => [staticVec4GridA!],
             key: const ValueKey('static-vec4-grid-a'),
           ),
@@ -43,7 +43,7 @@ class _FloatTestState extends State<FloatTest> {
         ListenableBuilder(
           listenable: staticVec4GridA!,
           builder: (_, __) {
-            final bd = staticVec4GridA!.byteData;
+            final bd = staticVec4GridA!.frameData;
             if (bd == null) {
               return const Center(child: Text('Waiting GPU readback...'));
             }
