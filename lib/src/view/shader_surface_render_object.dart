@@ -1,10 +1,4 @@
-import 'dart:ui' as ui;
-
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:shader_graph/shader_graph.dart';
-import 'package:shader_graph/src/foundation/mouse.dart';
-import 'package:shader_graph/src/foundation/render_data.dart';
+part of 'package:shader_graph/shader_graph.dart';
 
 class ShaderSurfaceRenderObject extends LeafRenderObjectWidget {
   const ShaderSurfaceRenderObject({
@@ -31,6 +25,7 @@ class ShaderSurfaceRenderObject extends LeafRenderObjectWidget {
   void updateRenderObject(BuildContext context, covariant RenderShaderSurface renderObject) {
     renderObject.devicePixelRatio = dpr;
     renderObject.onFramePresented = onFramePresented;
+    renderObject.graph = graph;
   }
 }
 
@@ -43,7 +38,14 @@ class RenderShaderSurface extends RenderBox {
         _devicePixelRatio = dpr,
         _onFramePresented = onFramePresented;
 
-  final ShaderGraph _graph;
+  ShaderGraph _graph;
+
+  set graph(ShaderGraph v) {
+    if (_graph == v) return;
+    _graph = v;
+    markNeedsCompositedLayerUpdate();
+  }
+
   double _time = 0.0;
   int _iFrame = 0;
   double _devicePixelRatio;
@@ -158,7 +160,7 @@ class ShaderSurfaceLayer extends OffsetLayer {
   void addToScene(ui.SceneBuilder builder) {
     if (_size.isEmpty) return;
 
-    final img = graph.mainNode.output ?? graph.mainNode.prevOutput;
+    final img = graph.mainNode._output ?? graph.mainNode._prevOutput;
 
     if (!_rendering) {
       _rendering = true;
@@ -177,11 +179,11 @@ class ShaderSurfaceLayer extends OffsetLayer {
       );
 
       if (_useSyncRender) {
-        graph.renderFrameSync(data: data);
+        graph._renderFrameSync(data: data);
         _rendering = false;
         onFramePresented?.call(iFrame.toInt());
       } else {
-        graph.renderFrame(data: data).catchError((_) {
+        graph._renderFrame(data: data).catchError((_) {
           // Swallow render errors here so we can keep the scheduler alive.
           // The last frame (if any) will remain on screen.
           return null;
@@ -193,6 +195,7 @@ class ShaderSurfaceLayer extends OffsetLayer {
       }
     }
 
+    // TODO: 检查下面代码有没有用上
     // If the image isn't ready yet, keep drawing the last frame to avoid flicker.
     if (img == null) {
       final last = _lastPicture;
@@ -210,7 +213,6 @@ class ShaderSurfaceLayer extends OffsetLayer {
         return;
       }
     }
-
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     Paint paint = Paint();
