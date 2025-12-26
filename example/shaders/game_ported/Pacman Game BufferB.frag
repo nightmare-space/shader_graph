@@ -121,12 +121,12 @@ float dec01(float s) { return sg_decodeSignedTo01(s); }
 
 float loadCell( in ivec2 re )
 {
-    float s = sg_loadFloat(re, VSIZE);
+    float s = SG_LOAD_FLOAT(iChannel0, re, VSIZE);
     return decRange(s, CELL_MIN, CELL_MAX);
 }
 
 vec4 loadPacmanPos() {
-    vec4 s = sg_loadVec4(txPacmanPos, VSIZE);
+    vec4 s = SG_LOAD_VEC4(iChannel0, txPacmanPos, VSIZE);
     return vec4(
         decRange(s.x, X_MIN, X_MAX),
         decRange(s.y, Y_MIN, Y_MAX),
@@ -136,7 +136,7 @@ vec4 loadPacmanPos() {
 }
 
 vec3 loadPacmanDir() {
-    vec3 s = sg_loadVec3(txPacmanMovDirNex, VSIZE);
+    vec3 s = SG_LOAD_VEC3(iChannel0, txPacmanMovDirNex, VSIZE);
     return vec3(
         decRange(s.x, DIR_MIN, DIR_MAX),
         decRange(s.y, DIR_MIN, DIR_MAX),
@@ -145,7 +145,7 @@ vec3 loadPacmanDir() {
 }
 
 vec4 loadGhostPosDir(ivec2 re) {
-    vec4 s = sg_loadVec4(re, VSIZE);
+    vec4 s = SG_LOAD_VEC4(iChannel0, re, VSIZE);
     float x = floor(decRange(s.x, X_MIN, X_MAX) + 0.5);
     float y = floor(decRange(s.y, Y_MIN, Y_MAX) + 0.5);
     float z = dec01(s.z);
@@ -154,7 +154,7 @@ vec4 loadGhostPosDir(ivec2 re) {
 }
 
 vec2 loadPoints() {
-    vec2 s = sg_loadVec2(txPoints, VSIZE);
+    vec2 s = SG_LOAD_VEC2(iChannel0, txPoints, VSIZE);
     return vec2(
         decRange(s.x, 0.0, SCORE_MAX),
         decRange(s.y, 0.0, PELLET_MAX)
@@ -162,15 +162,15 @@ vec2 loadPoints() {
 }
 
 float loadState() {
-    return decRange(sg_loadFloat(txState, VSIZE), STATE_MIN, STATE_MAX);
+    return decRange(SG_LOAD_FLOAT(iChannel0, txState, VSIZE), STATE_MIN, STATE_MAX);
 }
 
 float loadLives() {
-    return decRange(sg_loadFloat(txLives, VSIZE), 0.0, 3.0);
+    return decRange(SG_LOAD_FLOAT(iChannel0, txLives, VSIZE), 0.0, 3.0);
 }
 
 vec3 loadMode() {
-    vec3 s = sg_loadVec3(txMode, VSIZE);
+    vec3 s = SG_LOAD_VEC3(iChannel0, txMode, VSIZE);
     float mx = decRange(s.x, 0.0, 1.0);
     mx = (mx > 0.5) ? 1.0 : 0.0;
     return vec3(

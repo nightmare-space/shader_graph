@@ -7,12 +7,12 @@
 // - iChannel1: Shadertoy-style keyboard texture
 
 #include <../common/common_header.frag>
+#include <../common/sg_feedback_rgba8.frag>
 
 uniform sampler2D iChannel0;
 uniform sampler2D iChannel1;
 
 // Use standard scheme (4 physical pixels per virtual texel)
-#include <../common/sg_feedback_rgba8.frag>
 
 const vec2 VSIZE = vec2(14.0, 14.0);
 
@@ -36,7 +36,7 @@ float decAge(float s) { return sg_decodeSignedToRange(s, 0.0, AGE_MAX); }
 
 float keyDown(int keyCode) {
     // keyboard texture is 256x3, row0=down
-    return texture(iChannel1, (vec2(float(keyCode) + 0.5, 0.5)) / vec2(256.0, 3.0)).x;
+    return SG_TEXELFETCH1(ivec2(keyCode, 0)).x;
 }
 
 //
@@ -111,7 +111,7 @@ vec3 iBox( in vec2 ro, in vec2 rd, in float rad, in vec2 bce, in vec2 bwi )
 
 vec4 loadValue( in ivec2 re )
 {
-    return sg_loadVec4( re, VSIZE );
+    return SG_LOAD_VEC4( iChannel0, re, VSIZE );
 }
 void storeValue( in ivec2 re, in vec4 va, inout vec4 fragColor, in ivec2 p )
 {
