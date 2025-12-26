@@ -121,7 +121,7 @@ float enc01(float v01) { return sg_encode01ToSigned(v01); }
 float dec01(float s) { return sg_decodeSignedTo01(s); }
 
 float keyDown(int keyCode) {
-    return texture(iChannel1, (vec2(float(keyCode) + 0.5, 0.5)) / vec2(256.0, 3.0)).x;
+    return SG_TEXELFETCH1(ivec2(keyCode, 0)).x;
 }
 
 float hash(float seed)
@@ -133,13 +133,13 @@ float hash(float seed)
 
 vec4 loadValueSigned( in ivec2 re )
 {
-    return sg_loadVec4( re, VSIZE );
+    return SG_LOAD_VEC4( iChannel0, re, VSIZE );
 }
 
 float loadCell( in ivec2 re )
 {
     // cell stored in x (lane0)
-    float s = sg_loadFloat(re, VSIZE);
+    float s = SG_LOAD_FLOAT(iChannel0, re, VSIZE);
     float v = decRange(s, CELL_MIN, CELL_MAX);
     // Cells are discrete {0,1,2,3}. Round to avoid RGBA8 quantization drift.
     return clamp(floor(v + 0.5), CELL_MIN, CELL_MAX);
@@ -305,9 +305,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec4  pacmanPos       = decPos( loadValueSigned( txPacmanPos ) );
     vec3  pacmanMovDirNex = decDir3( loadValueSigned( txPacmanMovDirNex ).xyz );
     vec2  points          = decPoints( loadValueSigned( txPoints ).xy );
-    float state           = decRange( sg_loadFloat(txState, VSIZE), STATE_MIN, STATE_MAX ); // -1 = start game, 0 = start life, 1 = playing, 2 = game over
+    float state           = decRange( SG_LOAD_FLOAT(iChannel0, txState, VSIZE), STATE_MIN, STATE_MAX ); // -1 = start game, 0 = start life, 1 = playing, 2 = game over
     vec3  mode            = decMode( loadValueSigned( txMode ).xyz );
-    float lives           = decRange( sg_loadFloat(txLives, VSIZE), 0.0, 3.0 );
+    float lives           = decRange( SG_LOAD_FLOAT(iChannel0, txLives, VSIZE), 0.0, 3.0 );
     float cell            = loadCell( ifragCoord );
 
     ghostPos[0]           = decGhostPos( loadValueSigned( txGhost0PosDir ) );

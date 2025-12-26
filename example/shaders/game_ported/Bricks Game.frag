@@ -147,7 +147,7 @@ float doBrick( in ivec2 id, out vec3 col, out float glo, out vec2 cen )
     
     if( id.x>0 && id.x<13 && id.y>=0 && id.y<12 )
     {
-        vec4 brickRaw = sg_loadVec4( txBricks.xy + id, VSIZE );
+        vec4 brickRaw = SG_LOAD_VEC4( iChannel0, txBricks.xy + id, VSIZE );
         vec2 brickHere = vec2( dec01(brickRaw.x), decAge(brickRaw.y) );
 
         alp = 1.0;
@@ -186,20 +186,20 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //------------------------
     // load game state
     //------------------------
-    vec4  balPosVel = sg_loadVec4( txBallPosVel, VSIZE );
+    vec4  balPosVel = SG_LOAD_VEC4( iChannel0, txBallPosVel, VSIZE );
     vec2  ballPos   = balPosVel.xy;
 
     // 这些寄存器在 BufferA 中会把标量复制到 4 个 lane（抗线性采样串扰）。
     // 这里用平均值读取，进一步降低偶发 lane 混合导致的状态抖动。
-    vec4 paddleRaw = sg_loadVec4( txPaddlePos, VSIZE );
+    vec4 paddleRaw = SG_LOAD_VEC4( iChannel0, txPaddlePos, VSIZE );
     float paddlePos = dot(paddleRaw, vec4(0.25));
 
-    vec4 pointsRaw = sg_loadVec4( txPoints, VSIZE );
+    vec4 pointsRaw = SG_LOAD_VEC4( iChannel0, txPoints, VSIZE );
     float points    = decPoints( dot(pointsRaw, vec4(0.25)) );
 
-    vec4 stateRaw = sg_loadVec4( txState, VSIZE );
+    vec4 stateRaw = SG_LOAD_VEC4( iChannel0, txState, VSIZE );
     float state     = decState( dot(stateRaw, vec4(0.25)) );
-    vec4  lastHitRaw = sg_loadVec4( txLastHit, VSIZE );
+    vec4  lastHitRaw = SG_LOAD_VEC4( iChannel0, txLastHit, VSIZE );
     vec3  lastHit   = vec3( decAge(lastHitRaw.x), decAge(lastHitRaw.y), decAge(lastHitRaw.z) );
 
     

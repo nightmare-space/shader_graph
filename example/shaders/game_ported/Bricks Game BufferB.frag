@@ -12,7 +12,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Use pixel-center sampling based on integer coords to avoid any
     // accidental linear filtering between texels (critical for packed data).
     ivec2 ipos = ivec2(fragCoord - 0.5);
-    fragColor = texture(iChannel0, (vec2(ipos) + 0.5) / iResolution);
+    fragColor = SG_TEXELFETCH0(ipos);
 }
 
 #include <../common/main_shadertoy.frag>
