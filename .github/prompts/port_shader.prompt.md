@@ -17,10 +17,18 @@ description: Adjust the current shader file to follow the Flutter-compatible Sha
      
      #include <../common/common_header.frag>
      ```
+   - 如果当前 pass 需要使用 RGBA8 feedback（sg_feedback_rgba8），则在 `common_header.frag` 之后紧接着添加：
+     ```glsl
+     #include <../common/sg_feedback_rgba8.frag>
+     ```
+     并使用 `SG_LOAD_*` 宏做读取（例如 `SG_LOAD_VEC4(iChannel0, vpos, VSIZE)`），用 `sg_store*` 做写入。
    - **不要自己定义** `precision highp float;` 或 Shadertoy 的标准 uniforms（`iResolution`, `iTime`, `iFrame` 等）—— 这些已在 `common_header.frag` 中定义。
    - 若 shader 使用了 `iChannel0`~`iChannel3`（或更多），但缺少声明，请在 include 之后补齐对应的 `uniform sampler2D iChannelX;`（仅补充 common_header 未定义的部分）。
    - 如果 iChannel 用于简单颜色、噪声或不需要外部纹理，可以考虑替换为固定值或程序生成，例如 `vec3(1.0, 2.0, 4.0)` 或噪声函数，以减少依赖。
-   - 根据需要定义纹理大小常量，如 `const vec2 bufferSize = vec2(14.0, 14.0);` 或 `const vec2 keyboardSize = vec2(256.0, 1.0);`，用于替换 `texelFetch`。
+   - 若需要替换 `texelFetch`：
+     - 对 `iChannel0..3`：优先用 `SG_TEXELFETCH0..3(ivec2_ipos)`（使用 `common_header.frag` 内的 `iChannelResolution0..3`，由 Dart 侧自动填充）
+     - 其他 sampler：使用 `SG_TEXELFETCH(sampler, ivec2_ipos, sizePx)`，其中 `sizePx` 可来自你已有的常量，或从上游逻辑传入
+     - 只有在“纹理尺寸是固定且不由引擎提供”的情况下，才定义常量（例如 `const vec2 keyboardSize = vec2(256.0, 1.0);`）
    - **文件底部**必须包含 `#include <../common/main_shadertoy.frag>`。
    - 如果 shader 有共同的代码或函数，且有现有的 Common.frag 文件，直接导入，例如 `#include <../common/DULL SKULL - Prometheus Common.frag>`。
 
@@ -44,7 +52,10 @@ description: Adjust the current shader file to follow the Flutter-compatible Sha
        ```
      - 然后用 `ZERO` 代替 `min(iFrame, 0)` 以避免 int/float 混用编译错误。
    - 不在 `for` 的 init/step 中做累加运算；把 `fragColor *= i`、`fragColor += ...` 等逻辑移入循环体。
-   - 替换 `texelFetch(sampler, ivec2_coord, lod)` 为 `texture(sampler, (vec2(ivec2_coord) + 0.5) / textureSize)`，其中 `textureSize` 为预定义常量，以兼容 Impeller 的简单采样限制。
+   - 替换 `texelFetch(sampler, ivec2_coord, lod)`：
+     - **优先（iChannel0..3）**：`SG_TEXELFETCH0..3(ivec2_coord)`（前提是已 include `common_header.frag`）
+     - **其次（通用宏）**：`SG_TEXELFETCH(sampler, ivec2_coord, sizePx)`（`sizePx` 是 vec2 像素尺寸，可用 `iChannelResolutionN` 或已知常量）
+     - 若仍不能用，则改为 `texture(sampler, (vec2(ivec2_coord) + 0.5) / sizePx)`
    - 保持所有数学/几何/着色公式原样（距离场、噪声、相机、tonemapping 等），只修复未定义行为或语法兼容性问题。
    - **默认不添加数值稳定性保护**（如 `max(d, 1e-4)`）；仅当我在对话中明确要求"Android 稳定性"时，才对具体除数添加极小下限，并说明原因。
 

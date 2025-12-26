@@ -4,10 +4,22 @@
 约束：不使用位运算/bitcast（`>> & | ^`, `floatBitsToUint` 等），不依赖 `texelFetch`；避免使用 alpha 存数据（可能预乘）。
 
 ### 1) 通用约束（必须遵守）
-- 所有 pass 顶部必须 `#include <common_header.frag>`；每个 pass 显式声明 `uniform sampler2D iChannelN;`
+- 所有 pass 顶部必须先 `#include <../common/common_header.frag>`；每个 pass 显式声明 `uniform sampler2D iChannelN;`
+- 如果该 pass 需要 RGBA8 feedback（sg_feedback_rgba8），则在 common_header 之后紧接着：
+  - `#include <../common/sg_feedback_rgba8.frag>`
+  - 注意 include 顺序：`sg_feedback_rgba8.frag` 依赖 `common_header.frag` 提供的 `SG_TEXELFETCH`，因此必须先 include common_header。
 - 禁止：全局 `const int[] = int[](...)` 数组初始化（SkSL 易炸）；用 getter 函数 if-chain 替代
 - 禁止：位运算与整数 `%`；用 `mod/floor/pow` 等 float 算术替代
-- 采样替换：`texelFetch(tex, ivec2(x,y), 0)` → `texture(tex, (vec2(x,y)+0.5)/sizePx)`
+- 采样替换（优先）：`texelFetch(tex, ivec2(x,y), 0)` → `SG_TEXELFETCH(tex, ivec2(x,y), sizePx)`
+  - **优先（方案A，已内置通道分辨率）**：如果采样的是 `iChannel0..3`，直接用：
+    - `texelFetch(iChannel0, ivec2(x,y), 0)` → `SG_TEXELFETCH0(ivec2(x,y))`
+    - `texelFetch(iChannel1, ivec2(x,y), 0)` → `SG_TEXELFETCH1(ivec2(x,y))`
+    - `texelFetch(iChannel2, ivec2(x,y), 0)` → `SG_TEXELFETCH2(ivec2(x,y))`
+    - `texelFetch(iChannel3, ivec2(x,y), 0)` → `SG_TEXELFETCH3(ivec2(x,y))`
+    - 上述宏会使用 `common_header.frag` 中的 `iChannelResolution0..3`（由 Dart 侧自动填充）
+  - **兜底（通用宏）**：`SG_TEXELFETCH(tex, ivec2(x,y), sizePx)`
+    - 其中 `sizePx` 是纹理像素尺寸（vec2），可用 `iChannelResolutionN`（例如 `iChannelResolution0`）或你已有的 `bufferSize` / `VSIZE_PHYS` 等
+  - 若当前文件无法使用 `SG_TEXELFETCH`，退化为：`texture(tex, (vec2(x,y)+0.5)/sizePx)`
 - 所有临时变量尽量显式初始化（SkSL 对未初始化更敏感）
 - 数据 buffer 禁用 `discard`（用写默认值/return 代替）
 
@@ -23,14 +35,19 @@
     - virtual texel `(x,y)` 对应 physical 像素 `(x*4+lane, y)`，lane=0..3 分别存 vec4 的 x/y/z/w
   - 物理输出尺寸 = `(virtualWidth*4, virtualHeight)`（Dart 侧 `fixedOutputSize` 必须匹配）
 - 使用 API：
-  - 读：`sg_loadVec4(vpos, VSIZE)`
+  - 读（必须显式通道 token，使用宏）：
+    - `SG_LOAD_VEC4(iChannel0, vpos, VSIZE)`
+    - `SG_LOAD_FLOAT(iChannel0, vpos, VSIZE)`
+    - `SG_LOAD_VEC2/SG_LOAD_VEC3(...)` 同理
   - 写：`sg_storeVec4(re, va, fragColor, p)` / `sg_storeVec4Range(reRect, va, fragColor, p)`
   - 范围映射：`sg_encodeRangeToSigned/sg_decodeSignedToRange`（用于 points/time 等不在 [-1,1] 的值）
+
+> 注意：不要再使用旧的 `sg_load*`/`sg_fetchRaw` 读取函数，也不要假设默认通道（例如默认 iChannel0）。
 
 > 线性采样与 lane 串扰（重要）：Flutter 的 `sampler2D` 在部分平台/路径上可能是线性采样，
 > 导致相邻 physical 像素（lane 0..3）发生轻微混合，从而污染“虚拟 texel 的 vec4”。
 > - 对“只用到一个标量通道”的寄存器：建议写入时把标量复制到 `xyzw` 四个 lane（例如 `vec4(v,v,v,v)`）
-> - 对应读取时：用 `dot(raw, vec4(0.25))` 取平均，进一步降低偶发 lane 混合造成的抖动
+> - 对应读取时：建议先 `vec4 raw = SG_LOAD_VEC4(iChannel0, vpos, VSIZE);` 再用 `dot(raw, vec4(0.25))` 取平均，进一步降低偶发 lane 混合造成的抖动
 
 ### 3) 反馈链路（避免读写冲突）
 - 标准链路：
@@ -67,7 +84,7 @@
 ### 5) 迁移交付要求
 - 保持原 shader 结构与变量名尽量不变（最小改动）
 - 给出修改后的：
-  - `BufferA.frag`（状态读写替换为 sg_load/sg_store）
+  - `BufferA.frag`（状态读写替换为 `SG_LOAD_*` / `sg_store*`）
   - `BufferB.frag`（passthrough）
   - `Main.frag`（读取解码后的状态渲染）
   - Dart 接线（buffers + fixedOutputSize + feedback/pingpong）
