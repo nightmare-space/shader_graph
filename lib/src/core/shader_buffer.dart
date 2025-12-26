@@ -44,6 +44,7 @@ class ShaderBuffer extends ChangeNotifier {
   ui.Image? _prevOutput;
   ui.Image? _blankImage;
   ByteData? frameData;
+  bool _readbackInFlight = false;
   bool _isDisposed = false;
   bool get isDisposed => _isDisposed;
 
@@ -51,38 +52,38 @@ class ShaderBuffer extends ChangeNotifier {
 
   /// 添加一个 ShaderBuffer 作为输入，对应 shader 里的 iChannelN
   /// Adding a ShaderBuffer as input, corresponding to iChannelN in the shader
-  ShaderBuffer feedShader(ShaderBuffer buffer) {
-    _inputs.add(ShaderBufferInput(buffer));
+  ShaderBuffer feedShader(ShaderBuffer buffer, {WrapMode wrap = WrapMode.clamp}) {
+    _inputs.add(ShaderBufferInput(buffer, wrap: wrap));
     return this;
   }
 
   /// 添加一个 ShaderBuffer 作为输入资源，从 assetPath 加载，对应 shader 里的 iChannelN
   /// Adding a ShaderBuffer as input resource, loading from assetPath,
   /// corresponding to iChannelN in the shader
-  ShaderBuffer feedShaderFromAsset(String assetPath) {
-    _inputs.add(ShaderBufferInput(ShaderBuffer(assetPath)));
+  ShaderBuffer feedShaderFromAsset(String assetPath, {WrapMode wrap = WrapMode.clamp}) {
+    _inputs.add(ShaderBufferInput(ShaderBuffer(assetPath), wrap: wrap));
     return this;
   }
 
   /// 添加一个图片资源作为输入，从 assetPath 加载，对应 shader 里的 iChannelN
   /// Adding an image resource as input, loading from assetPath,
   /// corresponding to iChannelN in the shader
-  ShaderBuffer feedImageFromAsset(String assetPath) {
-    _inputs.add(AssetInput(assetPath: assetPath));
+  ShaderBuffer feedImageFromAsset(String assetPath, {WrapMode wrap = WrapMode.clamp}) {
+    _inputs.add(AssetInput(assetPath: assetPath, wrap: wrap));
     return this;
   }
 
   /// 添加一个键盘输入作为输入，对应 shader 里的 iChannelN
   /// Adding a keyboard input as input, corresponding to iChannelN in the shader
-  ShaderBuffer feedKeyboard() {
-    _inputs.add(KeyboardInput());
+  ShaderBuffer feedKeyboard({WrapMode wrap = WrapMode.clamp}) {
+    _inputs.add(KeyboardInput(wrap: wrap));
     return this;
   }
 
   /// 添加反馈输入，对应 shader 里的 iChannelN
   /// Adding a feedback input, corresponding to iChannelN in the shader
-  ShaderBuffer feedback() {
-    _inputs.add(ShaderBufferInput(this, usePreviousFrame: true));
+  ShaderBuffer feedback({WrapMode wrap = WrapMode.clamp}) {
+    _inputs.add(ShaderBufferInput(this, usePreviousFrame: true, wrap: wrap));
     return this;
   }
 
@@ -211,6 +212,22 @@ class ShaderBuffer extends ChangeNotifier {
     // _prevOutput?.dispose();
     // _prevOutput = _output;
     _output = img;
+
+    // Keep sync rendering for display, but still allow debug UIs to read back
+    // RGBA bytes. `toByteData()` is async, so we trigger it out-of-band.
+    // For the Static Vec4 Grid debug UI, a single readback is sufficient.
+    if (hasListeners && frameData == null && !_readbackInFlight) {
+      _readbackInFlight = true;
+      img.toByteData(format: ui.ImageByteFormat.rawRgba).then((bd) {
+        if (_isDisposed) return;
+        _readbackInFlight = false;
+        if (bd == null) return;
+        frameData = bd;
+        notifyListeners();
+      }).catchError((_) {
+        _readbackInFlight = false;
+      });
+    }
   }
 
   void renderShader({required RenderData data}) {
@@ -247,6 +264,12 @@ class ShaderBuffer extends ChangeNotifier {
       ..setFloat(5, my)
       ..setFloat(6, mz)
       ..setFloat(7, mw);
+
+    // Optional Shadertoy-style per-channel wrap modes.
+    // Encoded into a vec4 `iChannelWrap` (x/y/z/w == channel 0..3).
+    // This is implemented shader-side as a UV transform, not as a real GPU sampler state.
+    _setChannelWrapUniforms();
+    _setChannelResolutionUniforms();
     stopwatch.stop();
     // print('Setup uniforms took: ${stopwatch.elapsedMicroseconds} µs');
     int samplerIndex = 0;
@@ -270,6 +293,57 @@ class ShaderBuffer extends ChangeNotifier {
     } catch (e) {
       log('Error setting up shader samplers for $shaderAssetPath: $e');
       throw Exception('Failed to set up shader samplers for $shaderAssetPath: $e');
+    }
+  }
+
+  void _setChannelWrapUniforms() {
+    // Default to clamp.
+    final modes = <double>[0.0, 0.0, 0.0, 0.0];
+    for (int i = 0; i < _inputs.length && i < 4; i++) {
+      modes[i] = _inputs[i].wrap.uniformValue;
+    }
+
+    // `iChannelWrap` is expected to be declared after `iMouse` in shader source,
+    // so its float indices start at 8 (iResolution=2, iTime=1, iFrame=1, iMouse=4).
+    // If a shader doesn't declare it, setting these floats may throw; swallow for compatibility.
+    try {
+      _shader!
+        ..setFloat(8, modes[0])
+        ..setFloat(9, modes[1])
+        ..setFloat(10, modes[2])
+        ..setFloat(11, modes[3]);
+    } catch (_) {
+      // Intentionally ignored.
+    }
+  }
+
+  void _setChannelResolutionUniforms() {
+    // Default to 0 to avoid accidental division by zero in shaders; users can guard.
+    final sizes = <double>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+
+    for (int i = 0; i < _inputs.length && i < 4; i++) {
+      final input = _inputs[i];
+      final image = input.resolve() ?? _blankImage;
+      if (image == null) continue;
+      sizes[i * 2] = image.width.toDouble();
+      sizes[i * 2 + 1] = image.height.toDouble();
+    }
+
+    // `iChannelResolution0..3` are expected to be declared after `iChannelWrap` in shader source,
+    // so their float indices start at 12.
+    // If a shader doesn't declare them, setting these floats may throw; swallow for compatibility.
+    try {
+      _shader!
+        ..setFloat(12, sizes[0])
+        ..setFloat(13, sizes[1])
+        ..setFloat(14, sizes[2])
+        ..setFloat(15, sizes[3])
+        ..setFloat(16, sizes[4])
+        ..setFloat(17, sizes[5])
+        ..setFloat(18, sizes[6])
+        ..setFloat(19, sizes[7]);
+    } catch (_) {
+      // Intentionally ignored.
     }
   }
 
