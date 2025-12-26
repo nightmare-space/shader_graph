@@ -65,17 +65,6 @@ class ShaderSurface extends StatefulWidget {
       default:
         throw ArgumentError('buffer must be String or ShaderBuffer or List<ShaderBuffer>, got ${param.runtimeType}');
     }
-    // if (param is ShaderBuffer) {
-    // } else if (param is String) {
-    //   return ShaderSurface.buffers(
-    //     [param.shaderBuffer],
-    //     key: key,
-    //     upSideDown: upSideDown,
-    //     keyboardController: keyboardController,
-    //   );
-    // } else {
-    //   throw ArgumentError('buffer must be String or ShaderBuffer or List<ShaderBuffer>, got ${param.runtimeType}');
-    // }
   }
 
   /// See also [ShaderSurface.auto] which supports a builder function.
@@ -130,6 +119,7 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
+    BackdropFilterLayer a;
     _graphFuture = () async {
       await widget.graph.init();
       return widget.graph;

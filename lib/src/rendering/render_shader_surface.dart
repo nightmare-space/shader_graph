@@ -116,9 +116,10 @@ class ShaderSurfaceLayer extends OffsetLayer {
 
   final ShaderGraph graph;
 
-  // 测试代码
-  // This flag is for testing purposes only
-  final bool _useSyncRender = false;
+  // 测试代码，不知道是哪块代码变动后，现在内存不溢出了，头大
+  // This flag controls whether to use synchronous rendering to avoid memory leaks.
+  // But now it's no problem, so I'm not sure which code change fixed it.
+  final bool _useSyncRender = true;
   Size _size = Size.zero;
   double _devicePixelRatio = 1.0;
   double _time = 0.0;
