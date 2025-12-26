@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shader_graph/shader_graph.dart';
 
@@ -18,16 +19,16 @@ class _FloatTestState extends State<FloatTest> {
   ShaderBuffer? staticVec4GridA;
   @override
   Widget build(BuildContext context) {
-    // Virtual (shader): 6x4 texels, each texel is a vec4.
-    // Physical (Flutter): 6*4 lanes x 4 = 24x4.
+    // Virtual (shader): 3x2 texels, each texel is a vec4.
+    // Physical (Flutter): 3*4 lanes x 2 = 12x2.
     if (staticVec4GridA == null || staticVec4GridA!.isDisposed) {
       staticVec4GridA = 'shaders/multi_pass/Static Vec4 Grid A.frag'.shaderBuffer;
-      staticVec4GridA!.fixedOutputSize = const Size(6 * 4.0, 4);
+      staticVec4GridA!.fixedOutputSize = const Size(3 * 4.0, 2);
       staticVec4GridA!.feedEmpty();
     }
 
-    const virtualWidth = 6;
-    const virtualHeight = 4;
+    const virtualWidth = 3;
+    const virtualHeight = 2;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -100,16 +101,45 @@ class _Vec4GridPainter extends CustomPainter {
   final int virtualWidth;
   final int virtualHeight;
 
-  static const double _kQMax = 16777215.0; // 2^24 - 1
+  // Display a smaller subset to avoid text overlap.
+  // This does NOT change the underlying buffer layout (still 6x4 virtual -> 24x4 physical).
+  static const int _kDisplayVirtualWidth = 3;
+  static const int _kDisplayVirtualHeight = 2;
 
+  // Match `sg_unpack01FromRGB` in `sg_feedback_rgba8.frag` (base-256 fraction).
+  // r,g,b are bytes in [0..255].
   double _decodeSignedFromRgb(int r, int g, int b) {
-    final q = (r * 65536) + (g * 256) + b;
-    final u = q / _kQMax; // [0,1]
+    final v01 = (r / 256.0) + (g / 65536.0) + (b / 16777216.0);
+    final u = v01.clamp(0.0, 1.0);
     return (u * 2.0) - 1.0; // [-1,1]
+  }
+
+  double _clampSigned(double v) => v.clamp(-1.0, 1.0);
+
+  // Mirror `valueForTexel()` in `Static Vec4 Grid A.frag`.
+  // Virtual size is fixed to 6x4 in that shader; here we compute based on
+  // current virtualWidth/virtualHeight so the painter stays generic.
+  ({double x, double y, double z, double w}) _expectedForTexel(int vx, int vy) {
+    final fx = (virtualWidth <= 1) ? 0.0 : vx / (virtualWidth - 1);
+    final fy = (virtualHeight <= 1) ? 0.0 : vy / (virtualHeight - 1);
+
+    final x = fx * 2.0 - 1.0;
+    final y = fy * 2.0 - 1.0;
+    final z = _clampSigned((fx - fy) * 2.0);
+    final w = _clampSigned(
+      (math.sin((fx + fy) * 2.0 * math.pi) * 0.8),
+    );
+
+    return (x: x, y: y, z: z, w: w);
   }
 
   String _fmtSigned(double v, {int decimals = 3}) {
     final clamped = v.clamp(-1.0, 1.0);
+    return clamped.toStringAsFixed(decimals);
+  }
+
+  String _fmtDelta(double v, {int decimals = 4}) {
+    final clamped = v.clamp(-2.0, 2.0);
     return clamped.toStringAsFixed(decimals);
   }
 
@@ -118,8 +148,11 @@ class _Vec4GridPainter extends CustomPainter {
     const gap = 2.0;
     const pad = 2.0;
 
-    final cellW = (size.width - gap * (virtualWidth - 1)) / virtualWidth;
-    final cellH = (size.height - gap * (virtualHeight - 1)) / virtualHeight;
+    final displayW = math.min(virtualWidth, _kDisplayVirtualWidth);
+    final displayH = math.min(virtualHeight, _kDisplayVirtualHeight);
+
+    final cellW = (size.width - gap * (displayW - 1)) / displayW;
+    final cellH = (size.height - gap * (displayH - 1)) / displayH;
 
     final physicalWidth = virtualWidth * 4;
 
@@ -134,8 +167,8 @@ class _Vec4GridPainter extends CustomPainter {
       textAlign: TextAlign.center,
     );
 
-    for (int vy = 0; vy < virtualHeight; vy++) {
-      for (int vx = 0; vx < virtualWidth; vx++) {
+    for (int vy = 0; vy < displayH; vy++) {
+      for (int vx = 0; vx < displayW; vx++) {
         final rect = Rect.fromLTWH(
           vx * (cellW + gap),
           vy * (cellH + gap),
@@ -164,8 +197,16 @@ class _Vec4GridPainter extends CustomPainter {
         final z = laneValue(2);
         final w = laneValue(3);
 
-        final text = 'x: ${_fmtSigned(x)}\ny: ${_fmtSigned(y)}\n'
-            'z: ${_fmtSigned(z)}\nw: ${_fmtSigned(w)}';
+        final exp = _expectedForTexel(vx, vy);
+        final dx = x - exp.x;
+        final dy = y - exp.y;
+        final dz = z - exp.z;
+        final dw = w - exp.w;
+
+        final text = 'x e:${_fmtSigned(exp.x)} d:${_fmtSigned(x)} Δ:${_fmtDelta(dx)}\n'
+            'y e:${_fmtSigned(exp.y)} d:${_fmtSigned(y)} Δ:${_fmtDelta(dy)}\n'
+            'z e:${_fmtSigned(exp.z)} d:${_fmtSigned(z)} Δ:${_fmtDelta(dz)}\n'
+            'w e:${_fmtSigned(exp.w)} d:${_fmtSigned(w)} Δ:${_fmtDelta(dw)}';
         // Tuned for compact cells (e.g. 48px height)
         // 字体大小限制到 9-16 之间
         final fontSize = (cellH * 0.30).clamp(7.0, 16.0);
