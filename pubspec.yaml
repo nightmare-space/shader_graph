@@ -1,6 +1,6 @@
 name: shader_graph
 description: "A multi-pass render-graph framework for Flutter runtime shaders (FragmentProgram/RuntimeEffect), with Shadertoy-style buffers and feedback."
-version: 0.0.3
+version: 0.0.4
 homepage: https://github.com/nightmare-space/shader_graph
 
 environment:
