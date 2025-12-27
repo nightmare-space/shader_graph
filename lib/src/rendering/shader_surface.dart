@@ -119,7 +119,6 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    BackdropFilterLayer a;
     _graphFuture = () async {
       await widget.graph.init();
       return widget.graph;
