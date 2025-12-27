@@ -93,8 +93,10 @@ const int KEY_UP    = 38;
 const int KEY_RIGHT = 39;
 const int KEY_DOWN  = 40;
 
-const float speedPacman = 7.0;
-const float speedGhost  = 6.0;
+// const float speedPacman = 7.0;
+// const float speedGhost  = 6.0;
+const float speedPacman = 6.0;
+const float speedGhost  = 3.5;
 const float intelligence = 0.53;
 const float modeTime = 5.0;
 

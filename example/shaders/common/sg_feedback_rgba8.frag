@@ -3,24 +3,23 @@
 
 //
 // 重要说明（Flutter/SkSL 限制）
-//
-// Important notes (Flutter/SkSL limitation)
-//
 // Flutter RuntimeEffect 会把 sampler2D 翻译为 SkSL 的 `shader`。
 // SkSL 不允许在函数参数里传递 `shader` 类型，因此我们不能写：
 //   vec4 f(sampler2D tex, ...)
 // 因此读取时只能“看起来像传参”：用宏把 `iChannel0/iChannel1...` 这种 token
 // 直接展开到 texture(...) 调用中（避免函数参数出现 sampler2D）。
 //
+// 统一使用宏 API（显式传入通道 token）：
+//   SG_LOAD_VEC4(iChannel0, re, VSIZE)
+//   SG_LOAD_FLOAT(iChannel1, re, VSIZE)
+//
+//
+// Important notes (Flutter/SkSL limitation)
 // Flutter RuntimeEffect translates sampler2D into SkSL `shader`.
 // SkSL does not allow passing `shader` as a function parameter, so we cannot write:
 //   vec4 f(sampler2D tex, ...)
 // Therefore all reads must *look* like passing a sampler by using macros that expand
 // tokens like `iChannel0/iChannel1...` directly into texture(...) calls.
-//
-// 统一使用宏 API（显式传入通道 token）：
-//   SG_LOAD_VEC4(iChannel0, re, VSIZE)
-//   SG_LOAD_FLOAT(iChannel1, re, VSIZE)
 //
 // Use the macro API everywhere (explicit channel token):
 //   SG_LOAD_VEC4(iChannel0, re, VSIZE)
@@ -29,21 +28,12 @@
 //
 // ShaderGraph 通用反馈方案（适配 Flutter 的 RGBA8 feedback）
 //
-// ShaderGraph feedback scheme (adapted for Flutter RGBA8 feedback)
-//
 // 背景：Flutter RuntimeEffect 的 feedback 链路基本是
 //   Shader(float) -> RGBA8 -> ui.Image -> 下一帧 sampler
 // 因此如果你在 Shadertoy 里把 buffer 当 float texture 用（texelFetch 读写任意 float），
 // 在 Flutter 里直接读写会变成 8bit/通道，导致精度严重损失。
 //
-// Background: Flutter RuntimeEffect feedback is effectively:
-//   Shader(float) -> RGBA8 -> ui.Image -> next frame sampler
-// If you treat a buffer as a float texture in Shadertoy (texelFetch read/write arbitrary floats),
-// in Flutter you will only get 8-bit per channel, causing severe precision loss.
-//
 // 约束：Flutter/SkSL 环境常常缺少 uint/bit ops/floatBitsToUint/uintBitsToFloat。
-//
-// Constraints: Flutter/SkSL often lacks uint/bit ops/floatBitsToUint/uintBitsToFloat.
 //
 // 方案：
 // - 用纯 float 算术，把一个 [-1,1] 的值打包到 RGB 三通道（≈24bit），A 固定为 1。
@@ -54,6 +44,17 @@
 //
 // 你需要在 Dart 侧把该 buffer 的输出尺寸固定为物理尺寸（见 ShaderBuffer.fixedOutputSize）。
 //
+// 将虚拟 texel 坐标 vpos 映射到“展开后的物理纹理”上的 lane 像素坐标。
+//
+// ShaderGraph feedback scheme (adapted for Flutter RGBA8 feedback)
+//
+// Background: Flutter RuntimeEffect feedback is effectively:
+//   Shader(float) -> RGBA8 -> ui.Image -> next frame sampler
+// If you treat a buffer as a float texture in Shadertoy (texelFetch read/write arbitrary floats),
+// in Flutter you will only get 8-bit per channel, causing severe precision loss.
+//
+// Constraints: Flutter/SkSL often lacks uint/bit ops/floatBitsToUint/uintBitsToFloat.
+//
 // Approach:
 // - Use pure float math to pack a [-1,1] value into RGB (≈24-bit); alpha is fixed to 1.
 // - To preserve Shadertoy's “one texel = vec4” semantics, expand each virtual texel into 4 physical pixels:
@@ -62,9 +63,6 @@
 // - Physical texture size = vec2(virtualSize.x*4, virtualSize.y)
 //
 // On the Dart side, you must fix the output size to the physical size (see ShaderBuffer.fixedOutputSize).
-//
-
-// 将虚拟 texel 坐标 vpos 映射到“展开后的物理纹理”上的 lane 像素坐标。
 //
 // Map virtual texel coord vpos to a lane pixel coord in the expanded physical texture.
 ivec2 sg_lanePos(ivec2 vpos, int lane) {

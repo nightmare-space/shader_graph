@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:shader_graph/shader_graph.dart';
 
 import 'game/bricks_game.dart';
 import 'float_support.dart';
@@ -8,6 +9,7 @@ import 'mouse_view.dart';
 import 'multi_pass.dart';
 import 'game/pacman_game.dart';
 import 'text_render.dart';
+import 'wrap_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +44,7 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> {
-  int currentIndex = 0;
+  int currentIndex = 5;
 
   @override
   Widget build(BuildContext context) {
@@ -50,10 +52,12 @@ class _RootPageState extends State<RootPage> {
       Text('Bricks Game'),
       Text('Pacman Game'),
       Text('Text Render'),
-      Text('iFrame Test'),
+      Text('iFrame'),
       Text('Multi-Pass'),
       Text('Float Support'),
       Text('Mouse'),
+      Text('Wrap'),
+      Text('Keyboard'),
     ];
     return CupertinoPageScaffold(
       backgroundColor: Color(0xfff3f5f9),
@@ -85,7 +89,7 @@ class _RootPageState extends State<RootPage> {
         return SizedBox(
           width: width,
           height: height,
-          child: const [
+          child: [
             BricksGame(),
             PacmanGame(),
             TextRender(),
@@ -93,6 +97,16 @@ class _RootPageState extends State<RootPage> {
             MacWallpaperView(),
             FloatTest(),
             MouseView(),
+            WrapView(),
+            ShaderSurface.builder(
+              () {
+                final mainBuffer = 'shaders/keyboard/keyboard Test.frag'.shaderBuffer;
+                // iChannel0: keyboard texture, iChannel1: font atlas
+                mainBuffer.feedKeyboard();
+                mainBuffer.feedImageFromAsset('assets/codepage12.png');
+                return [mainBuffer];
+              },
+            ),
           ][currentIndex],
         );
       }),
