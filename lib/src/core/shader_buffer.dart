@@ -351,7 +351,7 @@ class ShaderBuffer extends ChangeNotifier {
   /// Only need to return shader inputs, used to build the dependency graph
   Iterable<ShaderBuffer> get _dependencies sync* {
     for (final input in _inputs) {
-      if (input is ShaderBufferInput) {
+      if (input is ShaderBufferInput && !input.usePreviousFrame) {
         yield input.buffer;
       }
     }
