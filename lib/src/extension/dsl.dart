@@ -30,7 +30,7 @@ extension ShaderBufferDSL on ShaderBuffer {
       return feedShader(input, wrap: wrap);
     } else if (input is String) {
       final ext = extension(input).toLowerCase();
-      if (ext == '.frag' || ext == '.vert') {
+      if (ext == '.frag') {
         return feedShaderFromAsset(input, wrap: wrap);
       } else {
         return feedImageFromAsset(input, wrap: wrap);
