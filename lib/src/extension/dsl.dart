@@ -1,6 +1,5 @@
 import 'package:path/path.dart';
 import 'package:shader_graph/shader_graph.dart';
-import 'package:shader_graph/src/foundation/wrap_mode.dart';
 
 /// DSL 扩展，方便通过字符串创建 ShaderBuffer 及其链式调用。
 /// DSL extension to create ShaderBuffer and chain calls via String.
