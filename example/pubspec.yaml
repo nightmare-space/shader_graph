@@ -23,8 +23,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/Wall.jpg
-    - assets/codepage12.png
+    - assets/
   shaders:
     - shaders/frame/IFrame Test.frag
     - shaders/mouse/IMouse Test.frag
@@ -45,3 +44,4 @@ flutter:
     - shaders/multi_pass/MacOS Monterey wallpaper.frag
     - shaders/multi_pass/MacOS Monterey wallpaper BufferA.frag
     - shaders/multi_pass/Static Vec4 Grid A.frag
+    - shaders/wrap/Wrap Debug.frag

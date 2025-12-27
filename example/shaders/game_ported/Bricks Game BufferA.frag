@@ -68,7 +68,7 @@ const float inputSpeed = 2.0;
 
 // Simulation speed scale.
 // 1.0 = original speed, 0.5 = half speed, 0.25 = quarter speed.
-const float SIM_SPEED = 0.5;
+const float SIM_SPEED = 0.3;
 
 const int KEY_SPACE = 32;
 const int KEY_LEFT  = 37;
