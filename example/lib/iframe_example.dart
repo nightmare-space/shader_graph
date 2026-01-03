@@ -10,8 +10,6 @@ class IframeExample extends StatelessWidget {
       () {
         final sourceBuffer = 'shaders/frame/IFrame Test.frag'.shaderBuffer;
         final overlayBuffer = 'shaders/keyboard/Keyboard Debug Overlay.frag'.shaderBuffer;
-        // iFrame
-        // TODO: Macos haven't progress display, but Android can
         overlayBuffer.feed(sourceBuffer);
         overlayBuffer.feedKeyboard();
         return [sourceBuffer, overlayBuffer];

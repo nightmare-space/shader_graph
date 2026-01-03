@@ -1,7 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:shader_graph/shader_graph.dart';
-
 import 'game/bricks_game.dart';
 import 'float_example.dart';
 import 'iframe_example.dart';

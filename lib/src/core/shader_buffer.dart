@@ -52,38 +52,50 @@ class ShaderBuffer extends ChangeNotifier {
 
   /// 添加一个 ShaderBuffer 作为输入，对应 shader 里的 iChannelN
   /// Adding a ShaderBuffer as input, corresponding to iChannelN in the shader
-  ShaderBuffer feedShader(ShaderBuffer buffer, {WrapMode wrap = WrapMode.clamp}) {
-    _inputs.add(ShaderBufferInput(buffer, wrap: wrap));
+  ShaderBuffer feedShader(
+    ShaderBuffer buffer, {
+    WrapMode wrap = WrapMode.clamp,
+    FilterMode filter = FilterMode.linear,
+  }) {
+    _inputs.add(ShaderBufferInput(buffer, wrap: wrap, filter: filter));
     return this;
   }
 
   /// 添加一个 ShaderBuffer 作为输入资源，从 assetPath 加载，对应 shader 里的 iChannelN
   /// Adding a ShaderBuffer as input resource, loading from assetPath,
   /// corresponding to iChannelN in the shader
-  ShaderBuffer feedShaderFromAsset(String assetPath, {WrapMode wrap = WrapMode.clamp}) {
-    _inputs.add(ShaderBufferInput(ShaderBuffer(assetPath), wrap: wrap));
+  ShaderBuffer feedShaderFromAsset(
+    String assetPath, {
+    WrapMode wrap = WrapMode.clamp,
+    FilterMode filter = FilterMode.linear,
+  }) {
+    _inputs.add(ShaderBufferInput(ShaderBuffer(assetPath), wrap: wrap, filter: filter));
     return this;
   }
 
   /// 添加一个图片资源作为输入，从 assetPath 加载，对应 shader 里的 iChannelN
   /// Adding an image resource as input, loading from assetPath,
   /// corresponding to iChannelN in the shader
-  ShaderBuffer feedImageFromAsset(String assetPath, {WrapMode wrap = WrapMode.clamp}) {
-    _inputs.add(AssetInput(assetPath: assetPath, wrap: wrap));
+  ShaderBuffer feedImageFromAsset(
+    String assetPath, {
+    WrapMode wrap = WrapMode.clamp,
+    FilterMode filter = FilterMode.linear,
+  }) {
+    _inputs.add(AssetInput(assetPath: assetPath, wrap: wrap, filter: filter));
     return this;
   }
 
   /// 添加一个键盘输入作为输入，对应 shader 里的 iChannelN
   /// Adding a keyboard input as input, corresponding to iChannelN in the shader
-  ShaderBuffer feedKeyboard({WrapMode wrap = WrapMode.clamp}) {
-    _inputs.add(KeyboardInput(wrap: wrap));
+  ShaderBuffer feedKeyboard({WrapMode wrap = WrapMode.clamp, FilterMode filter = FilterMode.linear}) {
+    _inputs.add(KeyboardInput(wrap: wrap, filter: filter));
     return this;
   }
 
   /// 添加反馈输入，对应 shader 里的 iChannelN
   /// Adding a feedback input, corresponding to iChannelN in the shader
-  ShaderBuffer feedback({WrapMode wrap = WrapMode.clamp}) {
-    _inputs.add(ShaderBufferInput(this, usePreviousFrame: true, wrap: wrap));
+  ShaderBuffer feedback({WrapMode wrap = WrapMode.clamp, FilterMode filter = FilterMode.linear}) {
+    _inputs.add(ShaderBufferInput(this, usePreviousFrame: true, wrap: wrap, filter: filter));
     return this;
   }
 
@@ -268,8 +280,7 @@ class ShaderBuffer extends ChangeNotifier {
     // Optional Shadertoy-style per-channel wrap modes.
     // Encoded into a vec4 `iChannelWrap` (x/y/z/w == channel 0..3).
     // This is implemented shader-side as a UV transform, not as a real GPU sampler state.
-    _setChannelWrapUniforms();
-    _setChannelResolutionUniforms();
+    _setChannelUniforms();
     stopwatch.stop();
     // print('Setup uniforms took: ${stopwatch.elapsedMicroseconds} µs');
     int samplerIndex = 0;
@@ -296,52 +307,67 @@ class ShaderBuffer extends ChangeNotifier {
     }
   }
 
-  void _setChannelWrapUniforms() {
-    // Default to clamp.
-    final modes = <double>[0.0, 0.0, 0.0, 0.0];
-    for (int i = 0; i < _inputs.length && i < 4; i++) {
-      modes[i] = _inputs[i].wrap.uniformValue;
-    }
+  void _setChannelUniforms() {
+    // Layout contract (in shader source, after iMouse):
+    // - iChannelWrap   : vec4  -> 4 floats
+    // - iChannelFilter : vec4  -> 4 floats
+    // - iChannelResolution0..3 : vec2 * 4 -> 8 floats
+    // Start index: 8 (iResolution=2, iTime=1, iFrame=1, iMouse=4).
 
-    // `iChannelWrap` is expected to be declared after `iMouse` in shader source,
-    // so its float indices start at 8 (iResolution=2, iTime=1, iFrame=1, iMouse=4).
-    // If a shader doesn't declare it, setting these floats may throw; swallow for compatibility.
-    try {
-      _shader!
-        ..setFloat(8, modes[0])
-        ..setFloat(9, modes[1])
-        ..setFloat(10, modes[2])
-        ..setFloat(11, modes[3]);
-    } catch (_) {
-      // Intentionally ignored.
-    }
-  }
-
-  void _setChannelResolutionUniforms() {
-    // Default to 0 to avoid accidental division by zero in shaders; users can guard.
+    // Defaults.
+    final wrapModes = <double>[0.0, 0.0, 0.0, 0.0];
+    final filterModes = <double>[0.0, 0.0, 0.0, 0.0];
     final sizes = <double>[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
     for (int i = 0; i < _inputs.length && i < 4; i++) {
       final input = _inputs[i];
+      wrapModes[i] = input.wrap.uniformValue;
+      filterModes[i] = input.filter.uniformValue;
+
       final image = input.resolve() ?? _blankImage;
       if (image == null) continue;
       sizes[i * 2] = image.width.toDouble();
       sizes[i * 2 + 1] = image.height.toDouble();
     }
 
-    // `iChannelResolution0..3` are expected to be declared after `iChannelWrap` in shader source,
-    // so their float indices start at 12.
-    // If a shader doesn't declare them, setting these floats may throw; swallow for compatibility.
+    int index = 8;
+
+    // Each block is try/catch for compatibility with shaders that don't declare these uniforms.
     try {
       _shader!
-        ..setFloat(12, sizes[0])
-        ..setFloat(13, sizes[1])
-        ..setFloat(14, sizes[2])
-        ..setFloat(15, sizes[3])
-        ..setFloat(16, sizes[4])
-        ..setFloat(17, sizes[5])
-        ..setFloat(18, sizes[6])
-        ..setFloat(19, sizes[7]);
+        ..setFloat(index++, wrapModes[0])
+        ..setFloat(index++, wrapModes[1])
+        ..setFloat(index++, wrapModes[2])
+        ..setFloat(index++, wrapModes[3]);
+    } catch (_) {
+      // Intentionally ignored.
+    } finally {
+      // Advance regardless to keep layout consistent.
+      index = 12;
+    }
+
+    try {
+      _shader!
+        ..setFloat(index++, filterModes[0])
+        ..setFloat(index++, filterModes[1])
+        ..setFloat(index++, filterModes[2])
+        ..setFloat(index++, filterModes[3]);
+    } catch (_) {
+      // Intentionally ignored.
+    } finally {
+      index = 16;
+    }
+
+    try {
+      _shader!
+        ..setFloat(index++, sizes[0])
+        ..setFloat(index++, sizes[1])
+        ..setFloat(index++, sizes[2])
+        ..setFloat(index++, sizes[3])
+        ..setFloat(index++, sizes[4])
+        ..setFloat(index++, sizes[5])
+        ..setFloat(index++, sizes[6])
+        ..setFloat(index++, sizes[7]);
     } catch (_) {
       // Intentionally ignored.
     }
