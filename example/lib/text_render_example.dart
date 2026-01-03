@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:shader_graph/shader_graph.dart';
 
-class TextRender extends StatelessWidget {
-  const TextRender({super.key});
+class TextRenderExample extends StatelessWidget {
+  const TextRenderExample({super.key});
 
   @override
   Widget build(BuildContext context) {

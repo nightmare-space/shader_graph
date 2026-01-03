@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:shader_graph/shader_graph.dart';
 
-class MacWallpaperView extends StatelessWidget {
-  const MacWallpaperView({super.key});
+class MultiPassExample extends StatelessWidget {
+  const MultiPassExample({super.key});
 
   @override
   Widget build(BuildContext context) {

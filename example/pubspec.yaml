@@ -4,7 +4,7 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.2.0 <4.0.0"
+  sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -24,6 +24,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/textures/
   shaders:
     - shaders/frame/IFrame Test.frag
     - shaders/mouse/IMouse Test.frag
@@ -44,4 +45,10 @@ flutter:
     - shaders/multi_pass/MacOS Monterey wallpaper.frag
     - shaders/multi_pass/MacOS Monterey wallpaper BufferA.frag
     - shaders/multi_pass/Static Vec4 Grid A.frag
+    # wrap & filter
     - shaders/wrap/Wrap Debug.frag
+    - shaders/wrap/Black Hole ODE Geodesic Solver.frag
+    - shaders/wrap/Broken Time Gate.frag
+    - shaders/wrap/Goodbye Dream Clouds.frag
+    - shaders/wrap/Tissue.frag
+    - shaders/wrap/Transition Burning.frag

@@ -5,14 +5,14 @@ import 'package:shader_graph/shader_graph.dart';
 
 /// 这个例子其实是在观察 GPU 内存中的数据
 /// This example visualizes float data stored in GPU memory.
-class FloatTest extends StatefulWidget {
-  const FloatTest({super.key});
+class FloatExample extends StatefulWidget {
+  const FloatExample({super.key});
 
   @override
-  State<FloatTest> createState() => _FloatTestState();
+  State<FloatExample> createState() => _FloatExampleState();
 }
 
-class _FloatTestState extends State<FloatTest> {
+class _FloatExampleState extends State<FloatExample> {
   // Static vec4 grid display sizing
   double staticGridMaxWidth = 800.0;
   double staticGridCellHeight = 80;
@@ -203,7 +203,8 @@ class _Vec4GridPainter extends CustomPainter {
         final dz = z - exp.z;
         final dw = w - exp.w;
 
-        final text = 'x e:${_fmtSigned(exp.x)} d:${_fmtSigned(x)} Δ:${_fmtDelta(dx)}\n'
+        final text =
+            'x e:${_fmtSigned(exp.x)} d:${_fmtSigned(x)} Δ:${_fmtDelta(dx)}\n'
             'y e:${_fmtSigned(exp.y)} d:${_fmtSigned(y)} Δ:${_fmtDelta(dy)}\n'
             'z e:${_fmtSigned(exp.z)} d:${_fmtSigned(z)} Δ:${_fmtDelta(dz)}\n'
             'w e:${_fmtSigned(exp.w)} d:${_fmtSigned(w)} Δ:${_fmtDelta(dw)}';
