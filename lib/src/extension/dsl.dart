@@ -6,16 +6,23 @@ import 'package:shader_graph/shader_graph.dart';
 extension StringDSL on String {
   ShaderBuffer get shaderBuffer => ShaderBuffer(this);
 
-  ShaderBuffer feed(dynamic input, {WrapMode wrap = WrapMode.clamp}) {
-    return shaderBuffer.feed(input, wrap: wrap);
+  ShaderBuffer feed(
+    dynamic input, {
+    WrapMode wrap = WrapMode.clamp,
+    FilterMode filter = FilterMode.nearest,
+  }) {
+    return shaderBuffer.feed(input, wrap: wrap, filter: filter);
   }
 
   ShaderBuffer feedback() {
     return shaderBuffer.feedback();
   }
 
-  ShaderBuffer feedKeyboard() {
-    return shaderBuffer.feedKeyboard();
+  ShaderBuffer feedKeyboard({
+    WrapMode wrap = WrapMode.clamp,
+    FilterMode filter = FilterMode.nearest,
+  }) {
+    return shaderBuffer.feedKeyboard(wrap: wrap, filter: filter);
   }
 }
 
@@ -24,15 +31,19 @@ extension ShaderBufferDSL on ShaderBuffer {
   /// 无论是给 ShaderBuffer 还是着色器资源路径，图片资源路径，可以自动判断
   /// I found it more convenient to have such a function in my own practice
   /// Whether it's a ShaderBuffer, shader asset path, or image asset path, it can automatically determine
-  ShaderBuffer feed(dynamic input, {WrapMode wrap = WrapMode.clamp}) {
+  ShaderBuffer feed(
+    dynamic input, {
+    WrapMode wrap = WrapMode.clamp,
+    FilterMode filter = FilterMode.nearest,
+  }) {
     if (input is ShaderBuffer) {
-      return feedShader(input, wrap: wrap);
+      return feedShader(input, wrap: wrap, filter: filter);
     } else if (input is String) {
       final ext = extension(input).toLowerCase();
       if (ext == '.frag') {
-        return feedShaderFromAsset(input, wrap: wrap);
+        return feedShaderFromAsset(input, wrap: wrap, filter: filter);
       } else {
-        return feedImageFromAsset(input, wrap: wrap);
+        return feedImageFromAsset(input, wrap: wrap, filter: filter);
       }
     } else {
       throw ArgumentError('input must be ShaderBuffer or String, got ${input.runtimeType}');

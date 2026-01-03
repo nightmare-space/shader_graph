@@ -10,6 +10,7 @@ class ShaderSurface extends StatefulWidget {
   const ShaderSurface({
     required this.graph,
     this.keyboardController,
+    // TODO: Support setting every input's upSideDown individually, use flipY.
     this.upSideDown = true,
     super.key,
   });
@@ -178,7 +179,7 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    // TODO 可以自定义鼠标按下后，是否保留位置
+    // TODO: Support retaining last mouse position
     return FutureBuilder(
       future: _graphFuture,
       builder: (context, snapshot) {

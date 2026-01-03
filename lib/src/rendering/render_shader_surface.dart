@@ -157,6 +157,7 @@ class ShaderSurfaceLayer extends OffsetLayer {
   }
 
   // OffsetLayer.addToScene() ≠ 立即渲染
+  // OffsetLayer.addToScene() ≠ immediate render
   @override
   void addToScene(ui.SceneBuilder builder) {
     if (_size.isEmpty) return;
@@ -196,7 +197,7 @@ class ShaderSurfaceLayer extends OffsetLayer {
       }
     }
 
-    // TODO: 检查下面代码有没有用上
+    // TODO: Check if the code below is useful
     // If the image isn't ready yet, keep drawing the last frame to avoid flicker.
     if (img == null) {
       final last = _lastPicture;
@@ -217,7 +218,6 @@ class ShaderSurfaceLayer extends OffsetLayer {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     Paint paint = Paint();
-    // TODO: 要不要设置 filterQuality?
     paint.filterQuality = FilterQuality.none;
     canvas.drawImageRect(
       img,
