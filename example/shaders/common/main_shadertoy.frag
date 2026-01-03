@@ -10,6 +10,7 @@ void main() {
     // and can even produce NaNs, causing frame-to-frame pixel coordinate drift.
     float keep = iFrame + iMouse.x + iTime + iResolution.x
         + iChannelWrap.x
+        + iChannelFilter.x
         + iChannelResolution0.x + iChannelResolution0.y
         + iChannelResolution1.x + iChannelResolution1.y
         + iChannelResolution2.x + iChannelResolution2.y
