@@ -1,41 +1,86 @@
 # Shader Graph
 
-`shader_graph` is a real-time multi-pass shader execution framework for Flutter
-`FragmentProgram/RuntimeEffect`.
+`shader_graph` is a real-time multi-pass shader execution framework for Flutter `FragmentProgram / RuntimeEffect`.
 
-It can even run a full game implemented entirely in shaders.
+It is now even capable of running a **fully shader-driven game**.
 
-<img src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.gif?raw=true"> 
+<img src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.gif?raw=true">
 
-It runs multiple `.frag` passes as a “render graph” (including Shadertoy-style
-BufferA/BufferB/Main, feedback, ping-pong).
+This framework connects multiple `.frag` shaders using a **render graph** model, fully supporting Shadertoy-style BufferA / BufferB / Main passes, as well as feedback / ping-pong patterns.
 
-It supports keyboard input, mouse input, image inputs, and Shadertoy-style Wrap
-(Clamp/Repeat/Mirror).
+It supports keyboard input, mouse input, image input, and Shadertoy-style wrap modes (Clamp / Repeat / Mirror).
 
-If you just want to quickly display a shader, you can use a simple Widget (for
-example `ShaderSurface.auto`).
+If you only want to quickly display a shader, you can directly use a simple widget (for example, `ShaderSurface.auto`).
 
-When you need a more complex pipeline (multi-pass / multiple inputs / feedback /
-ping-pong), use `ShaderBuffer` to declare inputs and dependencies.
+When you need more complex pipelines (multi-pass / multiple inputs / feedback / ping-pong), you should explicitly declare inputs and dependencies using `ShaderBuffer`.
 
-The framework handles the topological scheduling and per-frame execution, and
-forwards each pass output as a `ui.Image` to downstream passes.
+The framework handles topological scheduling and per-frame execution, and passes the output of each pass downstream as a `ui.Image`.
 
-English | [中文 README](README-CH.md)
+[English README](README.md) | 中文
 
-## Screenshots
-### Games
+---
+
+## Examples
+
+I have created the  
+[awesome_flutter_shaders](https://github.com/mengyanshou/awesome_flutter_shaders) project using this library.
+
+This is currently the most complete collection of examples, containing **100+ Shadertoy shaders ported to Flutter**, and is highly recommended as a reference.
+
+The `example` directory in this project also contains demonstrations for individual features.  
+The source code of `shader_graph` itself includes extensive Chinese and English comments for easier reading and understanding.
+
+---
+
+## Roadmap
+
+- [x] Support using one shader as a buffer input to another shader (Multi-Pass)
+- [x] Support using images as shader buffer inputs
+- [x] Support feedback input (Ping-Pong: previous frame → next frame)
+- [x] Support mouse input
+- [x] Support keyboard input
+- [x] Support wrap modes (Clamp / Repeat / Mirror)
+- [x] Automatic topological sorting
+- [x] Support texelFetch (texel size calculated automatically via macros)
+- [x] Support Shadertoy-style filters (Linear / Nearest / Mipmap)
+  - [x] Nearest / Linear: basically supported, with minor differences
+  - [ ] Mipmap: not supported yet; exploring mipmap-like approaches feasible in Flutter
+- [ ] Support rendering a Widget into a texture and using it as a buffer input
+- [ ] Animation control
+
+---
+
+## Float Support (RGBA8 Feedback)
+
+Flutter feedback textures are usually RGBA8 and cannot reliably store arbitrary float values.
+
+This project provides a unified porting solution: `sg_feedback_rgba8`.  
+Scalar values are encoded into RGB (24-bit), and packed horizontally using 4 lanes, preserving the semantic model of “one texel = one vec4”.
+
+---
+
+## texelFetch Support
+
+Provided by `common_header.frag`:
+
+- `SG_TEXELFETCH`
+- `SG_TEXELFETCH0..3`
+
+These macros replace native `texelFetch` calls and automatically obtain channel resolutions via `iChannelResolution0..3`.
+
+---
+
+## Ping-Pong & Multi-Pass & RGBA8 Feedback
 
 <table>
   <tr>
     <td>
-      <img width="200px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.png?raw=true">
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.png?raw=true">
       <br>
       Bricks Game
     </td>
     <td>
-      <img width="200px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Pacman%20Game.png?raw=true">
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Pacman%20Game.png?raw=true">
       <br>
       Pacman Game
     </td>
@@ -43,121 +88,114 @@ English | [中文 README](README-CH.md)
   </tr>
 </table>
 
-### Demos
+
+## Wrap & Filter
+
+The following examples demonstrate the decisive impact of wrap and filter modes on shader results.  
+Without support for these features, the visual output differs significantly from Shadertoy.
+
+
+**Raw Image**
+
+<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Raw Image.png?raw=true">
+
+**Transition Burning**
+
+<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Transition%20Burning.png?raw=true">
+
+**Tissue**
+
+<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Tissue.png?raw=true">
+
+**Black Hole**
+
+<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Black%20Hole.png?raw=true">
+
+**Broken Time Gate**
+
+<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Broken%20Time%20Gate.png?raw=true">
+
+**Goodbye Dream Clouds**
+
+<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Goodbye%20Dream%20Clouds.png?raw=true">
+
+### Keyboard Input
+
+> Note: These visuals are not Flutter UI elements. They are rendered entirely by shaders and respond to keyboard input in real time.
+
+
+<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Keyboard.png?raw=true">
+
+## Others
 
 <table>
   <tr>
     <td>
-      <img width="200px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/IFrame.png?raw=true">
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/IFrame.png?raw=true">
       <br>
       IFrame
     </td>
     <td>
-      <img width="200px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Mac%20Wallpaper.png?raw=true">
-      <br>
-      Mac Wallpaper
-    </td>
-    <td>
-      <img width="200px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Noise%20Lab.png?raw=true">
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Noise%20Lab.png?raw=true">
       <br>
       Noise Lab
     </td>
   </tr>
   <tr>
     <td>
-      <img width="200px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Text.png?raw=true">
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Text.png?raw=true">
       <br>
       Text
     </td>
     <td>
-      <img width="200px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap.png?raw=true">
-      <br>
-      Wrap
-    </td>
-    <td></td>
-  </tr>
-</table>
-
-### Float
-
-<table>
-  <tr>
-    <td>
-      <img width="200px" src="https://raw.githubusercontent.com/nightmare-space/shader_graph/main/screenshot/Float%20Test.png">
+      <img width="300px" src="https://raw.githubusercontent.com/nightmare-space/shader_graph/main/screenshot/Float%20Test.png">
       <br>
       Float Test
     </td>
   </tr>
 </table>
 
-I have already used this library to create
-[awesome_flutter_shaders](https://github.com/mengyanshou/awesome_flutter_shaders),
-which contains 100+ ported shader examples.
+---
 
-## Features
+## Foreword
 
-- [x] Support using a Shader as a Buffer, then feeding it into another Shader (Multi-Pass)
-- [x] Support feeding images as Buffer inputs into shaders
-- [x] Support feedback inputs (Ping-Pong: feed previous frame into next frame)
-- [x] Mouse input
-- [x] Keyboard input
-- [x] Wrap (Clamp/Repeat/Mirror)
-- [x] Automatic topological sorting
-- [x] texelFetch support with automatic texel size computation (requires macros and shader code changes)
+My understanding of shaders used to be quite vague. A friend recommended that I read  
+[The Book of Shaders](https://thebookofshaders.com/). I read part of it, but never truly grasped the underlying principles.
 
-**Float support (RGBA8 feedback)**
+However, I found the shaders on Shadertoy extremely interesting. Some of them are essentially complete games, which led me to a question:
 
-Flutter feedback textures are typically RGBA8, which cannot reliably store
-arbitrary float state.
-This project provides a unified porting scheme `sg_feedback_rgba8`: encode
-scalars into RGB (24-bit), and preserve Shadertoy-like “one texel = vec4”
-semantics via 4-lane horizontal packing.
+**Could these shaders be ported to run in Flutter?**
 
-**texelFetch support**
+First of all, I would like to thank the author of  
+[shader_buffers](https://github.com/alnitak/shader_buffers). This project was what initially allowed me to run some Shadertoy shaders in Flutter.
 
-Replace native `texelFetch` calls with the `SG_TEXELFETCH` / `SG_TEXELFETCH0..3`
-macros from `common_header.frag` (using `iChannelResolution0..3` as channel
-pixel sizes).
+However, during practical use, I gradually realized that its design and functionality differed significantly from my needs. Some of these issues were addressed by contributing fixes via pull requests.
 
-## Roadmap
+As my requirements continued to grow, I realized that the problem was not limited to shader_buffers. Instead, it reflected an entire category of issues that almost all existing Flutter shader frameworks had not addressed.
 
-- [ ] Render a Widget into a texture, then feed it as an input Buffer to a shader
-- [ ] Support Shadertoy-style Filter (Linear/Nearest/Mipmap). This directly affects whether some ports match.
+As a result, `shader_graph` was born.
 
-## Preface
+---
 
-My understanding of shaders used to be vague.
-A friend recommended [The Book of Shaders](https://thebookofshaders.com/).
-I read part of it, but I still didn't fully understand the underlying ideas.
-However, I found Shadertoy shaders incredibly fun — some of them are even full
-games. That's crazy, so I wanted to port them to Flutter.
+## Quick Start
 
-First, thanks to the author of
-[shader_buffers](https://github.com/alnitak/shader_buffers), which helped me
-start porting shaders to Flutter.
+First, one important point must be clarified:
 
-While using that library, I found gaps between what I needed and what the
-original design provided, so I contributed fixes via PRs.
+**Shadertoy shaders must be ported before they can run in Flutter.**
 
-But I still had too many requirements left to implement — not only for
-shader_buffers, but for almost every shader framework in Flutter — so
-shader_graph was born.
+This project provides a helper prompt for porting:  
+`port_shader.prompt.md`
 
-## Usage
+The basic workflow is as follows:
 
-First, you must understand that Shadertoy shader code needs to be ported before
-it can run on Flutter. This repo includes a porting prompt:
-[port_shader.prompt](.github/prompts/port_shader.prompt.md)
-
-Usage: open the shader asset path you want to port (it should live in the
-project), then in Copilot or similar AI tools, input the following prompt:
+1. Open the shader file you want to port (it is recommended to place it directly in your project)
+2. Enter the corresponding prompt in Copilot or other AI tools
 
 ```text
 Follow instructions in [port_shader.prompt.md](.github/prompts/port_shader.prompt.md).
 ```
 
-This repo includes fairly complete example code. See
-[example](example/lib/main.dart)
+Example code can be found at: [example](example/lib/main.dart)
 
 ### Minimal runnable examples
 
@@ -194,8 +232,11 @@ ShaderSurface.builder(() {
 
 ## ShaderBuffer
 
-It can be the final render shader, or an intermediate Buffer that feeds into
-another shader. Typically we use the extension to create it:
+`ShaderBuffer` can be used either as the final rendering shader, or as an intermediate `Buffer` that is fed into other shaders.
+
+It is the most core node abstraction in the entire render graph.
+
+It is usually created via an extension:
 
 ```dart
 '$asset_path'.shaderBuffer;
@@ -207,69 +248,152 @@ Which is equivalent to:
 final buffer = ShaderBuffer('$asset_path');
 ```
 
-Use it with `ShaderSurface.auto` / `ShaderSurface.builder`, or use
-`ShaderSurface.buffers` to pass a `List<ShaderBuffer>`.
+`ShaderBuffer` can be used together with `ShaderSurface.auto` and `ShaderSurface.builder`,
+or passed directly as a `List<ShaderBuffer>` via `ShaderSurface.buffers`.
 
-### Add inputs
+### Inputs
 
-Inputs are added uniformly via the extension `buffer.feed` method. It infers
-the input type from the string suffix. You can also use the raw APIs like
-`feedShader` / `feedShaderFromAsset` / ...
+`ShaderBuffer` supports multiple input sources, used to simulate the iChannel behavior in Shadertoy.
 
-**Feed another shader as an input**
+Currently supported input types include:
+
+- Output of other ShaderBuffers  
+- Images (ui.Image / Asset)  
+- Keyboard input  
+- Mouse input  
+- Built-in uniforms such as time and resolution  
+
+These inputs are bound uniformly to the corresponding shader parameters on every frame.
+
+### feed
+
+
+`feed` is used to bind an **input source** to the current `ShaderBuffer`.
+
+The input source can be:
+
+- The output of another `ShaderBuffer`  
+- A shader asset path ending with `.frag` (which will be implicitly created as a `ShaderBuffer`)
+
+This is the core mechanism for building multi-pass rendering pipelines.
+
 ```dart
-// use ShaderBuffer directly
-buffer.feed(anotherBuffer);
-// use string path which ends with .frag
+// Use another ShaderBuffer directly as input
+buffer.feed(bufferA);
+
+// Use a shader asset path ending with .frag as input
 buffer.feed("$asset_path");
 ```
 
-**Keyboard input**
+The code above means:
+
+- `bufferA` (or the ShaderBuffer created from `$asset_path`) will be executed first  
+- Its output will be passed to the current `buffer` as a texture input (iChannel)
+
+In other words, `feed` always affects the ShaderBuffer it is called on, and does not modify the fed buffer itself.
+
+You can also add other inputs while calling `feed`.
+
+**Add keyboard as input**
+
 ```dart
 buffer.feedKeyboard();
 ```
 
-**Feed an asset image**
-> Commonly used for noise/texture inputs
+**Add asset image as input**
 
-You can see examples in
+> Usually used to input noise, textures, etc.
+
+This part can be referenced from  
 [awesome_flutter_shaders](https://github.com/mengyanshou/awesome_flutter_shaders/tree/main/assets)
 
 ```dart
 buffer.feed('$image_asset_path');
 ```
 
-**Ping-Pong**
+## feedback / ping-pong
 
-That is, feeding itself into itself. Don't worry about infinite loops;
-shader_graph handles it.
+In Shadertoy, feedback is a very common pattern, for example:
 
-This keeps the original Shadertoy semantics, and it's a very common pattern on
-Shadertoy.
+- Particle simulations  
+- Fluid simulations  
+- Cellular automata  
+- Game logic entirely driven by shaders  
+
+`shader_graph` provides explicit support for this pattern via `feedback()`.
 
 ```dart
-buffer.feedback();
+final bufferA = '$asset_shader_buffera'.shaderBuffer.feedback();
 ```
 
-**Set Wrap (repeat/mirror/clamp)**
+After feedback is enabled:
 
-Flutter runtime shaders don't expose sampler wrap/filter states directly.
-This project models Wrap via a shader-side UV transform through the uniform
-`iChannelWrap` (x/y/z/w correspond to iChannel0..3).
+- The input of the current frame will include the output of the previous frame  
+- The framework automatically maintains double buffering (ping-pong)  
+- Users do not need to manually manage texture swapping  
 
-Set wrap per input on the Dart side:
+You can also continue to feed other inputs while using feedback:
+
+```dart
+final bufferA =
+  '$asset_shader_buffera'
+    .shaderBuffer
+    .feedback()
+    .feedKeyboard();
+```
+
+---
+
+## Wrap (repeat / mirror / clamp)
+
+Flutter Runtime Shader does not directly expose sampler wrap / filter states.
+
+This project simulates wrap behavior via the `iChannelWrap` uniform and UV transformations inside the shader.
+
+Set wrap for each input on the Dart side:
 
 ```dart
 final buffer = '$shader_asset_path'.shaderBuffer;
 buffer.feed('$texture_asset_path', wrap: WrapMode.repeat);
 ```
 
-On the shader side, sample using `SG_TEX0/1/2/3(...)` provided by
-`common_header.frag` (do not call `texture(iChannelN, uv)` directly).
+When sampling in the shader, you **must** use the macros provided by `common_header.frag`:
+
+- `SG_TEX0`
+- `SG_TEX1`
+- `SG_TEX2`
+- `SG_TEX3`
+
+Do not directly use `texture(iChannelN, uv)`.
+
+---
+
+## Output Size
+
+By default, the output size of each `ShaderBuffer` is the same as the final Widget size.
+
+However, in some scenarios, you may want to:
+
+- Perform computation at a lower resolution (performance optimization)  
+- Use a fixed logical resolution (e.g. pixel-art games)  
+- Explicitly control the size of feedback buffers  
+
+In such cases, you can explicitly specify the output size:
+
+```dart
+buffer.fixedOutputSize = const Size(64, 64);
+```
+
+In game examples, a common approach is:
+
+- Use a logical resolution (such as 14×14)  
+- Physical output width = logical width × 4 (RGBA8 feedback)  
+
+---
 
 ## ShaderSurface.auto
 
-`ShaderSurface.auto` returns a `Widget`:
+`ShaderSurface.auto` returns a Widget that can be directly used to display a shader.
 
 ```dart
 Center(
@@ -277,7 +401,7 @@ Center(
 )
 ```
 
-You can place it anywhere. Note that you usually need to provide a height:
+You can place it anywhere in the Widget tree, and it usually needs a height constraint:
 
 ```dart
 Column(
@@ -290,10 +414,13 @@ Column(
 )
 ```
 
-`ShaderSurface.auto` supports String (shader asset path) / `ShaderBuffer` /
-`List<ShaderBuffer>`.
+`ShaderSurface.auto` supports passing in:
 
-When the shader has inputs, passing a `ShaderBuffer` is more appropriate.
+- String (shader asset path)  
+- ShaderBuffer  
+- List<ShaderBuffer>  
+
+When a shader has inputs, passing a ShaderBuffer directly is more appropriate.
 
 ```dart
 Builder(builder: (context) {
@@ -311,9 +438,7 @@ ShaderSurface.auto(
 );
 ```
 
-### Using Extensions
-
-When multiple `ShaderBuffer`s need inputs, it becomes like this:
+For example, when multiple ShaderBuffers all require inputs, it becomes:
 
 ```dart
 Column(
@@ -333,7 +458,7 @@ Column(
 )
 ```
 
-With Extensions it can be optimized to:
+With extensions, this can be simplified to:
 
 ```dart
 Column(
@@ -351,8 +476,8 @@ Column(
 
 ## ShaderSurface.builder
 
-The examples above only have a single shader. But for complex pipelines, for
-example:
+The previous examples only involve a single shader.  
+For more complex pipelines such as:
 
 ```text
 ┌─────┐    ┌─────┐    ┌─────┐
@@ -400,22 +525,23 @@ ShaderSurface.builder(() {
 })
 ```
 
-## Topological sorting
+## Topological Sorting
 
-For Shadertoy multi-pass pipelines, the final Buffer list can be topologically
-sorted only when the per-frame dependency graph has no cycles (i.e. it is a DAG).
+For Shadertoy-style multi-pass setups, only when the dependencies within the same frame do not form a cycle (DAG) can the final buffer list be topologically sorted.
 
-In other words: within the same frame, passes may read outputs from passes they
-depend on (or external inputs), but must not form a cycle (for example A reads B
-while B reads A).
+That is:
 
-Feedback / ping-pong reads the *previous frame* output, which is a cross-frame
-dependency and typically does not break the current-frame topological order.
+- Each pass can only read the output of passes it depends on (or external inputs)  
+- Cyclic dependencies within the same frame are not allowed (e.g. A reads B while B reads A)  
 
-Note: for inputs within a single Buffer, you must still feed them in Shadertoy
-iChannel order (iChannel0..N), because channels are bound sequentially.
+Feedback / ping-pong reads the output of the previous frame, which is a cross-frame dependency and usually does not break the current frame’s topological ordering.
 
-See [pacman_game.dart](example/lib/game/pacman_game.dart)
+Note:  
+Within a single Buffer, the order of input channels (iChannel0..N) must still strictly follow Shadertoy’s defined order, because shader-side sampling is bound by channel order.
+
+---
+
+See `pacman_game.dart` for a concrete example.
 
 ```dart
 class PacmanGame extends StatefulWidget {
@@ -453,6 +579,41 @@ class _PacmanGameState extends State<PacmanGame> {
   }
 }
 ```
+
+## toImageSync Memory Leak
+
+[toImageSync retains display list which can lead to surprising memory retention](https://github.com/flutter/flutter/issues/138627)
+
+A pitfall encountered previously: on Flutter 3.38.5 (macOS), `toImageSync` may still cause noticeable memory growth.
+During local testing, after running the app for a period of time, it would continuously consume physical memory and start using swap, eventually reaching extremely large usage (over 200GB).
+
+The current project’s mitigation strategy:
+
+- Use the asynchronous `toImage()` instead (avoiding the high-risk path of `toImageSync`)  
+- But it cannot be triggered every frame, otherwise it still causes huge overhead  
+- Therefore, a Ticker / throttling strategy is used: only trigger the next update after a “new frame image is ready”  
+
+## Copilot
+
+To be honest, I am currently maintaining many projects, and several projects I care about are in a semi-paused state.
+
+Therefore, during the implementation of this project, I relied on a considerable amount of AI (mainly GPT-5.2).
+
+However, the overall design, structural decisions, debugging, and validation were still led by me.
+
+I am not very familiar with shader-related topics; most of the code in this area was almost entirely generated by AI, and debugging and validation also consumed a significant amount of my effort.
+
+The overall design on the Dart side was carried out almost entirely according to my ideas.
+
+The goals have always been:
+
+- Simple and intuitive to use  
+- Sufficiently powerful functionality  
+- Clear design structure  
+- Readable project code  
+- Extensive bilingual comments, suitable for learning and secondary development
+
+---
 
 ## ShaderToy → Flutter porting guide (Feedback/Wrap)
 
@@ -808,45 +969,3 @@ float keyDown(int keyCode) {
 - `.github/prompts/port_shader.prompt.md`
 - `.github/prompts/port_shader_float.prompt.md`
 
-## toImageSync memory leak
-
-[toImageSync retains display list which can lead to surprising memory retention](https://github.com/flutter/flutter/issues/138627)
-
-I hit a pitfall here: on Flutter 3.38.5 (macOS), `toImageSync` can still show
-obvious memory growth.
-In my local tests, after running for a while, the app would keep consuming
-physical memory and start using Swap. The peak usage became extremely large
-(over 200GB).
-
-Current mitigation in this repo:
-
-- Use async `toImage()` (avoid the risky `toImageSync` path)
-- But we cannot trigger a conversion every frame, otherwise the overhead is huge
-- Use a Ticker / throttling strategy: only schedule the next update after a
-  “new frame image is ready”
-
-## Copilot
-
-To be honest, I maintain too many projects, and many projects I care about are
-in a semi-maintained state.
-
-So for this project, I used a lot of AI to help build it — mostly GPT-5.2.
-Also because I do a fair amount of open source, I get some free quota every
-month. I love open source.
-
-But I try to keep myself in the driver seat rather than letting it drive me.
-I’m not very familiar with shader-related topics, and most of the shader-side
-code was written by it.
-
-I was responsible for organizing things and writing prompts. Even though the
-AI did a lot, debugging and validation still took significant time.
-
-The Dart-side design is almost entirely based on my own ideas.
-
-I try to ensure:
-
-- Simple and convenient usage
-- Powerful capabilities
-- Reasonable design
-- Readable code
-- Lots of Chinese/English comments
