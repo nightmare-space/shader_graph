@@ -27,15 +27,6 @@ uniform vec4 iChannelWrap;
 // Shadertoy-style per-channel filter modes (x/y/z/w == iChannel0..3).
 // Encoded as floats:
 // 0 = linear, 1 = nearest, 2 = mipmap (currently best-effort / may be unsupported).
-// NOTE: The backend sampler state behind `texture()` may be fixed (linear or nearest)
-// and not controllable per-sampler in Flutter runtime shaders. To keep FilterMode
-// meaningful across backends, this header implements linear/nearest in shader code
-// (by UV snapping / manual bilinear). Mipmap/LOD remains best-effort.
-//
-// 注意：Flutter runtime shader 侧通常无法按 sampler 设置线性/最近邻，`texture()`
-// 背后的默认 filter 可能是固定的（线性或最近邻）。为保证 FilterMode 在不同后端
-// 仍然有效，这里用 shader 代码实现 linear/nearest（UV 吸附与手动双线性）。
-// mipmap/LOD 仍然是 best-effort。
 uniform vec4 iChannelFilter;
 
 // iChannel0..3 对应输入纹理的像素尺寸（width,height），用于 texel-center / texelFetch 替代。
@@ -70,12 +61,11 @@ vec2 sg_wrapUv(vec2 uv, float mode) {
 //
 // Flutter 可用的 texelFetch 替代方案（避免 sampler2D 作为函数参数）
 //
-// Flutter-usable texelFetch replacement (no sampler2D params)
-//
-
 // 把整型 texel 坐标转换为 texel center 的 UV，并再次“吸附”到中心，
 // 用于减少某些 GPU 上因微小 UV 误差造成的线性混合。
 //
+// Flutter-usable texelFetch replacement (no sampler2D params)
+
 // Convert integer texel coord -> UV at texel center, then "snap" to center again
 // to reduce accidental linear mixing due to tiny UV errors on some GPUs.
 vec2 sg_texelCenterUv(ivec2 ipos, vec2 sizePx) {
@@ -156,11 +146,21 @@ vec2 sg_texelCenterUv(ivec2 ipos, vec2 sizePx) {
 #define SG_SAMPLE_FILTER(tex, uv, wrapMode, filterMode, sizePx) \
 	(((filterMode) < 0.5) ? SG_SAMPLE_LINEAR((tex), (uv), (wrapMode), (sizePx)) : texture((tex), SG_NEAREST_UV((uv), (wrapMode), (sizePx))))
 
+
 #define SG_TEX0(tex, uv) SG_SAMPLE_FILTER((tex), (uv), iChannelWrap.x, iChannelFilter.x, SG_CHANNEL_SIZE0)
 #define SG_TEX1(tex, uv) SG_SAMPLE_FILTER((tex), (uv), iChannelWrap.y, iChannelFilter.y, SG_CHANNEL_SIZE1)
 #define SG_TEX2(tex, uv) SG_SAMPLE_FILTER((tex), (uv), iChannelWrap.z, iChannelFilter.z, SG_CHANNEL_SIZE2)
 #define SG_TEX3(tex, uv) SG_SAMPLE_FILTER((tex), (uv), iChannelWrap.w, iChannelFilter.w, SG_CHANNEL_SIZE3)
 
+
+
+
+// TODO:
+// 非常奇怪，在编写的过程中，传递 sampler2D 在 awesome_flutter_shaders 的 runtime 下正常
+// 但是在当前 example 中有运行报错
+//
+// It's very strange that passing sampler2D works fine in awesome_flutter_shaders runtime
+// but causes runtime error in the current example
 // Filtered sampling: 0=linear, 1=nearest. (2=mipmap reserved)
 // Implemented shader-side to avoid relying on backend sampler state.
 vec4 sg_sample_filter(sampler2D tex, vec2 uv, float wrapMode, float filterMode, vec2 sizePx) {
@@ -173,8 +173,6 @@ vec4 sg_sample_filter(sampler2D tex, vec2 uv, float wrapMode, float filterMode, 
 vec4 sg_texture0(sampler2D tex, vec2 uv) {
 	return sg_sample_filter(tex, uv, iChannelWrap.x, iChannelFilter.x, SG_CHANNEL_SIZE0);
 }
-
-// TODO: 非常奇怪，在编写的过程中，传递 sampler2D 作为参数一直有运行报错，但现在又没了
 vec4 sg_texture(int idx, sampler2D tex, vec2 uv) {
     switch (idx) {
         case 0: return SG_TEX0(tex, uv);
