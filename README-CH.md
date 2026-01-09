@@ -4,7 +4,7 @@
 
 它现在甚至可以运行一个**完全由着色器实现的游戏**。
 
-<img src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.gif?raw=true">
+![Bricks Game](https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.gif?raw=true)
 
 该框架通过「渲染图（Render Graph）」的方式，将多个 `.frag` 串联执行，完整支持 Shadertoy 风格的 BufferA / BufferB / Main、feedback / ping-pong 等模型。
 
@@ -16,7 +16,7 @@
 
 框架会负责拓扑调度与逐帧执行，并把每个 pass 的输出作为 `ui.Image` 传递给下游。
 
-[English README](README.md) | 中文
+[English](README.md) | 中文
 
 ---
 
@@ -236,7 +236,7 @@ ShaderSurface.builder(() {
 
 `ShaderBuffer` 既可以作为最终渲染的着色器，也可以作为中间 `Buffer` 输入到其他着色器。
 
-它是整个渲染图（Render Graph）中最核心的节点抽象。
+是构建 Widget `ShaderSurface` 的核心组件。
 
 通常通过 extension 创建：
 
@@ -250,51 +250,63 @@ ShaderSurface.builder(() {
 final buffer = ShaderBuffer('$asset_path');
 ```
 
-`ShaderBuffer` 可以配合 `ShaderSurface.auto`、`ShaderSurface.builder` 使用，
-或者通过 `ShaderSurface.buffers` 直接传入 `List<ShaderBuffer>`。
+`ShaderBuffer` 可以配合以下 API 使用
 
-### 输入源（Inputs）
+- `ShaderSurface.auto`: 自动判断输入类型
+- `ShaderSurface.builder`: builer 最终调用 buffers，但 builder 提供函数回调，可以供开发者优化 Widget 代码结构
+- `ShaderSurface.buffers`: 适合复杂多 Pass 场景
+
+```dart
+// path ends with .frag
+final buffer = '$shader_asset_path'.shaderBuffer;
+ShaderSurface.auto(buffer);
+final shader_asset_path = '$shader_asset_path';
+ShaderSurface.auto(shader_asset_path);
+ShaderSurface.builder(() {
+  // ...
+  return [bufferA, bufferB, mainBuffer];
+});
+ShaderSurface.buffers([bufferA, bufferB, mainBuffer]);
+```
+
+### ShaderBuffer.feed
 
 ShaderBuffer 支持多种输入源，用于模拟 Shadertoy 中的 iChannel 行为。
 
 目前支持的输入类型包括：
 
-- 其他 ShaderBuffer 的输出  
-- 图片（ui.Image / Asset）  
-- 键盘输入  
+- 其他 ShaderBuffer
+- 图片（ui.Image / Asset
+- Widget
+- 键盘输入
 - 鼠标输入  
 - 时间 / 分辨率等内置 Uniform  
 
-这些输入会在每一帧被统一绑定到对应的着色器参数中。
+`ShaderBuffer.feed` 用于将**一个输入源**绑定到当前的 `ShaderBuffer`。通过传入的类型来最终调用，如果是字符串，则会根据字符串结尾来判断
 
+- `feedWidgetInput(Widget)`
+- `feedShader(ShaderBuffer)`
+- `feedShaderFromAsset(String)`
+- `feedImageFromAsset(String)`
 
-### feed
+当然，你也可以直接调用原始的 API
 
-`feed` 用于将**一个输入源**绑定到当前的 `ShaderBuffer`。
-
-这个输入源可以是：
-
-- 另一个 `ShaderBuffer` 的输出  
-- 一个以 `.frag` 结尾的 shader 资源路径（会被隐式创建为 `ShaderBuffer`）
-
-这是构建多 Pass 渲染链路的核心方式。
+**添加 Widget 作为输入**
 
 ```dart
-// 直接使用另一个 ShaderBuffer 作为输入
-buffer.feed(bufferA);
-
-// 使用以 .frag 结尾的 shader 资源路径作为输入
-buffer.feed("$asset_path");
+final imageWidget = Text('Hello Flutter ShaderGraph!');
+buffer.feed(imageWidget);
 ```
 
-上述代码表示：
+**添加另一个着色器作为输入**
 
-- `bufferA`（或 `$asset_path` 对应的 ShaderBuffer）会先执行  
-- 它的输出结果会作为纹理输入（iChannel）传递给当前的 `buffer`
-
-也就是说，`feed` 始终作用于**调用它的 ShaderBuffer**，并不会改变被 feed 的那个 buffer 本身。
-
-你可以连续调用 `feed`，为当前 `ShaderBuffer` 绑定多个输入，从而构建更复杂的依赖关系。
+```dart
+final otherBuffer = '$other_shader_asset_path'.shaderBuffer;
+buffer.feed(otherBuffer);
+// or
+final otherBuffer = ShaderBuffer('$other_shader_asset_path');
+buffer.feedShader(otherBuffer);
+```
 
 **添加键盘作为输入**
 
@@ -310,22 +322,40 @@ buffer.feedKeyboard();
 [awesome_flutter_shaders](https://github.com/mengyanshou/awesome_flutter_shaders/tree/main/assets)
 
 ```dart
+// path ends with .png/.jpg/...，not .frag
 buffer.feed('$image_asset_path');
 ```
 
-## feedback / ping-pong
+你可以连续调用 `feed`，为当前 `ShaderBuffer` 绑定多个输入，从而构建更复杂的依赖关系。
+
+> 注意这个顺序要和 Shadertoy 定义的 iChannel 顺序一致。
+
+```dart
+final imageWidget = Image.asset('$image_asset_path');
+final buffer = '$shader_asset_path'.shaderBuffer
+  // path ends with .frag
+  // will call feedShaderFromAsset
+  .feed('$texture_asset_path1')
+  // path ends with .png/.jpg
+  // will call feedImageFromAsset
+  .feed('$texture_asset_path2')
+  // will call feedWidgetInput
+  .feed(imageWidget)
+  .feedback()
+  .feedKeyboard();
+```
+
+**feedback / ping-pong**
 
 在 Shadertoy 中，feedback 是一个非常常见的模式，例如：
 
 - 粒子模拟  
 - 流体模拟  
 - 细胞自动机  
-- 完全由 Shader 驱动的游戏逻辑  
-
-`shader_graph` 通过 `feedback()` 对这一模式进行了明确支持。
+- 完全由 Shader 驱动的游戏逻辑
 
 ```dart
-final bufferA = '$asset_shader_buffera'.shaderBuffer.feedback();
+final bufferA = '$asset_shader_buffera'.feedback();
 ```
 
 启用 feedback 后：
@@ -344,8 +374,27 @@ final bufferA =
     .feedKeyboard();
 ```
 
----
+**自定义输入**
 
+目前自定义空间有限，且没有合适的回调开发者更新的时机，但如果实现一个 `ShaderInput`，仍然可以实现自定义输入源。例如相机的输出流、音频流等，后续可能会实现
+
+```dart
+abstract class ShaderInput {
+  Image? resolve();
+
+  /// UV wrap semantics expected by the shader.
+  ///
+  /// Defaults to clamp for compatibility.
+  WrapMode get wrap => WrapMode.clamp;
+
+  /// Filter semantics expected by the shader.
+  ///
+  /// Defaults to linear for compatibility.
+  FilterMode get filter => FilterMode.linear;
+}
+```
+
+---
 
 ## Wrap（repeat / mirror / clamp）
 
@@ -422,7 +471,7 @@ Column(
 
 - String（shader 资源路径）  
 - ShaderBuffer  
-- List<ShaderBuffer>  
+- List\<ShaderBuffer>  
 
 当 Shader 存在输入时，直接传入 ShaderBuffer 更合适。
 

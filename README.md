@@ -4,7 +4,7 @@
 
 It is now even capable of running a **fully shader-driven game**.
 
-<img src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.gif?raw=true">
+![Bricks Game](https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.gif?raw=true)
 
 This framework connects multiple `.frag` shaders using a **render graph** model, fully supporting Shadertoy-style BufferA / BufferB / Main passes, as well as feedback / ping-pong patterns.
 
@@ -16,7 +16,7 @@ When you need more complex pipelines (multi-pass / multiple inputs / feedback / 
 
 The framework handles topological scheduling and per-frame execution, and passes the output of each pass downstream as a `ui.Image`.
 
-[English README](README.md) | 中文
+English | [中文](README-CH.md)
 
 ---
 
@@ -45,7 +45,7 @@ The source code of `shader_graph` itself includes extensive Chinese and English 
 - [x] Support Shadertoy-style filters (Linear / Nearest / Mipmap)
   - [x] Nearest / Linear: basically supported, with minor differences
   - [ ] Mipmap: not supported yet; exploring mipmap-like approaches feasible in Flutter
-- [ ] Support rendering a Widget into a texture and using it as a buffer input
+- [x] Support rendering a Widget into a texture and using it as a buffer input
 - [ ] Animation control
 
 ---
@@ -66,7 +66,7 @@ Provided by `common_header.frag`:
 - `SG_TEXELFETCH`
 - `SG_TEXELFETCH0..3`
 
-These macros replace native `texelFetch` calls and automatically obtain channel resolutions via `iChannelResolution0..3`.
+These macros replace native `texelFetch` calls and automatically obtain channel resolutions via `iChannelResolution0..3`. 
 
 ---
 
@@ -166,8 +166,7 @@ However, I found the shaders on Shadertoy extremely interesting. Some of them ar
 
 **Could these shaders be ported to run in Flutter?**
 
-First of all, I would like to thank the author of  
-[shader_buffers](https://github.com/alnitak/shader_buffers). This project was what initially allowed me to run some Shadertoy shaders in Flutter.
+First of all, I would like to thank the author of [shader_buffers](https://github.com/alnitak/shader_buffers). This project was what initially allowed me to run some Shadertoy shaders in Flutter.
 
 However, during practical use, I gradually realized that its design and functionality differed significantly from my needs. Some of these issues were addressed by contributing fixes via pull requests.
 
@@ -232,105 +231,135 @@ ShaderSurface.builder(() {
 
 ## ShaderBuffer
 
-`ShaderBuffer` can be used either as the final rendering shader, or as an intermediate `Buffer` that is fed into other shaders.
+`ShaderBuffer` can serve both as a final rendering shader and as an intermediate `Buffer` input to other shaders.
 
-It is the most core node abstraction in the entire render graph.
+It is the core component for building Widget `ShaderSurface`.
 
-It is usually created via an extension:
+Typically created via extension:
 
 ```dart
 '$asset_path'.shaderBuffer;
 ```
 
-Which is equivalent to:
+It is equivalent to:
 
 ```dart
 final buffer = ShaderBuffer('$asset_path');
 ```
 
-`ShaderBuffer` can be used together with `ShaderSurface.auto` and `ShaderSurface.builder`,
-or passed directly as a `List<ShaderBuffer>` via `ShaderSurface.buffers`.
+`ShaderBuffer` can be used with the following APIs:
 
-### Inputs
+- `ShaderSurface.auto`: Automatically determines input types
+- `ShaderSurface.builder`: The builder ultimately calls buffers, but the builder provides a function callback that allows developers to optimize Widget code structure
+- `ShaderSurface.buffers`: Suitable for complex multi-pass scenarios
 
-`ShaderBuffer` supports multiple input sources, used to simulate the iChannel behavior in Shadertoy.
+```dart
+// path ends with .frag
+final buffer = '$shader_asset_path'.shaderBuffer;
+ShaderSurface.auto(buffer);
+final shader_asset_path = '$shader_asset_path';
+ShaderSurface.auto(shader_asset_path);
+ShaderSurface.builder(() {
+  // ...
+  return [bufferA, bufferB, mainBuffer];
+});
+ShaderSurface.buffers([bufferA, bufferB, mainBuffer]);
+```
+
+### ShaderBuffer.feed
+
+ShaderBuffer supports multiple input sources to simulate iChannel behavior in Shadertoy.
 
 Currently supported input types include:
 
-- Output of other ShaderBuffers  
-- Images (ui.Image / Asset)  
-- Keyboard input  
-- Mouse input  
-- Built-in uniforms such as time and resolution  
+- Other ShaderBuffers
+- Images (ui.Image / Asset)
+- Widgets
+- Keyboard input
+- Mouse input
+- Built-in uniforms such as time and resolution
 
-These inputs are bound uniformly to the corresponding shader parameters on every frame.
+`ShaderBuffer.feed` is used to bind __an input source__ to the current `ShaderBuffer`. Based on the type passed in, it ultimately calls the corresponding method. If it's a string, it determines the method based on the string suffix:
 
-### feed
+- `feedWidgetInput(Widget)`
+- `feedShader(ShaderBuffer)`
+- `feedShaderFromAsset(String)`
+- `feedImageFromAsset(String)`
 
+Of course, you can also directly call the original APIs.
 
-`feed` is used to bind an **input source** to the current `ShaderBuffer`.
-
-The input source can be:
-
-- The output of another `ShaderBuffer`  
-- A shader asset path ending with `.frag` (which will be implicitly created as a `ShaderBuffer`)
-
-This is the core mechanism for building multi-pass rendering pipelines.
+**Adding a Widget as input**
 
 ```dart
-// Use another ShaderBuffer directly as input
-buffer.feed(bufferA);
-
-// Use a shader asset path ending with .frag as input
-buffer.feed("$asset_path");
+final imageWidget = Text('Hello Flutter ShaderGraph!');
+buffer.feed(imageWidget);
 ```
 
-The code above means:
+**Adding another shader as input**
 
-- `bufferA` (or the ShaderBuffer created from `$asset_path`) will be executed first  
-- Its output will be passed to the current `buffer` as a texture input (iChannel)
+```dart
+final otherBuffer = '$other_shader_asset_path'.shaderBuffer;
+buffer.feed(otherBuffer);
+// or
+final otherBuffer = ShaderBuffer('$other_shader_asset_path');
+buffer.feedShader(otherBuffer);
+```
 
-In other words, `feed` always affects the ShaderBuffer it is called on, and does not modify the fed buffer itself.
-
-You can also add other inputs while calling `feed`.
-
-**Add keyboard as input**
+**Adding keyboard as input**
 
 ```dart
 buffer.feedKeyboard();
 ```
 
-**Add asset image as input**
+**Adding an image asset as input**
 
-> Usually used to input noise, textures, etc.
+> Typically used to input noise, textures, etc.
 
-This part can be referenced from  
+This part can be referenced from\
 [awesome_flutter_shaders](https://github.com/mengyanshou/awesome_flutter_shaders/tree/main/assets)
 
 ```dart
+// path ends with .png/.jpg/..., not .frag
 buffer.feed('$image_asset_path');
 ```
 
-## feedback / ping-pong
+You can call `feed` multiple times to bind multiple inputs to the current `ShaderBuffer`, thereby building more complex dependency relationships.
+
+> Note that this order must match the iChannel order defined by Shadertoy.
+
+```dart
+final imageWidget = Image.asset('$image_asset_path');
+final buffer = '$shader_asset_path'.shaderBuffer
+  // path ends with .frag
+  // will call feedShaderFromAsset
+  .feed('$texture_asset_path1')
+  // path ends with .png/.jpg
+  // will call feedImageFromAsset
+  .feed('$texture_asset_path2')
+  // will call feedWidgetInput
+  .feed(imageWidget)
+  .feedback()
+  .feedKeyboard();
+```
+
+**feedback / ping-pong**
 
 In Shadertoy, feedback is a very common pattern, for example:
 
-- Particle simulations  
-- Fluid simulations  
-- Cellular automata  
-- Game logic entirely driven by shaders  
-
-`shader_graph` provides explicit support for this pattern via `feedback()`.
+- Particle simulations
+- Fluid simulations
+- Cellular automata
+- Game logic entirely driven by shaders
 
 ```dart
-final bufferA = '$asset_shader_buffera'.shaderBuffer.feedback();
+final bufferA = '$asset_shader_buffera'.feedback();
 ```
 
-After feedback is enabled:
+After enabling feedback:
 
-- The input of the current frame will include the output of the previous frame  
-- The framework automatically maintains double buffering (ping-pong)  
-- Users do not need to manually manage texture swapping  
+- The input of the current frame will include the output of the previous frame
+- The framework automatically maintains double buffering (ping-pong)
+- Users do not need to manually manage texture swapping
 
 You can also continue to feed other inputs while using feedback:
 
@@ -340,6 +369,26 @@ final bufferA =
     .shaderBuffer
     .feedback()
     .feedKeyboard();
+```
+
+__Custom inputs__
+
+Currently, customization space is limited, and there is no suitable callback timing for developers to update. However, by implementing a `ShaderInput`, custom input sources can still be achieved. For example, camera output streams, audio streams, etc., may be implemented in the future.
+
+```dart
+abstract class ShaderInput {
+  Image? resolve();
+
+  /// UV wrap semantics expected by the shader.
+  ///
+  /// Defaults to clamp for compatibility.
+  WrapMode get wrap => WrapMode.clamp;
+
+  /// Filter semantics expected by the shader.
+  ///
+  /// Defaults to linear for compatibility.
+  FilterMode get filter => FilterMode.linear;
+}
 ```
 
 ---
@@ -418,7 +467,7 @@ Column(
 
 - String (shader asset path)  
 - ShaderBuffer  
-- List<ShaderBuffer>  
+- List\<ShaderBuffer>  
 
 When a shader has inputs, passing a ShaderBuffer directly is more appropriate.
 
