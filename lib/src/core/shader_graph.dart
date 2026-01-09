@@ -6,6 +6,7 @@ class ShaderGraph {
 
   final List<ShaderBuffer> _buffers;
   late final List<ShaderBuffer> _orderedBuffers;
+
   void _buildExecutionOrder() {
     final visited = <ShaderBuffer>{};
     final visiting = <ShaderBuffer>{};

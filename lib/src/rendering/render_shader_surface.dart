@@ -1,12 +1,13 @@
 part of 'package:shader_graph/shader_graph.dart';
 
-class ShaderSurfaceRenderObject extends LeafRenderObjectWidget {
+class ShaderSurfaceRenderObject extends MultiChildRenderObjectWidget {
   const ShaderSurfaceRenderObject({
     super.key,
     required this.graph,
     required this.dpr,
     this.onRenderObjectCreated,
     this.onFramePresented,
+    super.children,
   });
 
   final ShaderGraph graph;
@@ -29,7 +30,14 @@ class ShaderSurfaceRenderObject extends LeafRenderObjectWidget {
   }
 }
 
-class RenderShaderSurface extends RenderBox {
+class _ShaderSurfaceParentData extends ContainerBoxParentData<RenderBox> {}
+
+abstract class _ShaderSurfaceBase extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _ShaderSurfaceParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _ShaderSurfaceParentData> {}
+
+class RenderShaderSurface extends _ShaderSurfaceBase {
   RenderShaderSurface({
     required ShaderGraph graph,
     required double dpr,
@@ -91,12 +99,40 @@ class RenderShaderSurface extends RenderBox {
   bool get isRepaintBoundary => true;
 
   @override
-  void performLayout() {
-    if (constraints.biggest.isInfinite) {
-      size = Size.zero;
-      return;
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _ShaderSurfaceParentData) {
+      child.parentData = _ShaderSurfaceParentData();
     }
+  }
+
+  @override
+  bool hitTestSelf(Offset position) => false;
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    return defaultHitTestChildren(result, position: position);
+  }
+
+  @override
+  void performLayout() {
     size = constraints.biggest;
+    if (!size.isFinite) {
+      size = constraints.constrain(Size.zero);
+    }
+
+    final childConstraints = BoxConstraints.tight(size);
+    RenderBox? child = firstChild;
+    while (child != null) {
+      child.layout(childConstraints, parentUsesSize: false);
+      final childParentData = child.parentData! as _ShaderSurfaceParentData;
+      childParentData.offset = Offset.zero;
+      child = childParentData.nextSibling;
+    }
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    defaultPaint(context, offset);
   }
 
   @override
@@ -116,10 +152,9 @@ class ShaderSurfaceLayer extends OffsetLayer {
 
   final ShaderGraph graph;
 
-  // 测试代码，不知道是哪块代码变动后，现在内存不溢出了，头大
-  // This flag controls whether to use synchronous rendering to avoid memory leaks.
-  // But now it's no problem, so I'm not sure which code change fixed it.
-  final bool _useSyncRender = true;
+  // 使用 Impeller 渲染，开启同步不会内存泄露，Skia 则会。
+  // Using Impeller for rendering, enabling sync won't leak memory, Skia will.
+  final bool _useSyncRender = false;
   Size _size = Size.zero;
   double _devicePixelRatio = 1.0;
   double _time = 0.0;
@@ -160,7 +195,13 @@ class ShaderSurfaceLayer extends OffsetLayer {
   // OffsetLayer.addToScene() ≠ immediate render
   @override
   void addToScene(ui.SceneBuilder builder) {
-    if (_size.isEmpty) return;
+    if (_size.isEmpty) {
+      return;
+    }
+
+    // Ensure child layers (e.g. SnapshotSampler) are added first so they can
+    // capture their images before the shader graph renders.
+    addChildrenToScene(builder);
 
     final img = graph.mainNode._output ?? graph.mainNode._prevOutput;
 

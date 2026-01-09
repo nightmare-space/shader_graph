@@ -21,6 +21,7 @@ class ShaderSurface extends StatefulWidget {
     Key? key,
     KeyboardController? keyboardController,
   }) {
+    // TODO: 要不要 Cache 一下 graph
     final graph = ShaderGraph(buffers);
     return ShaderSurface(
       graph: graph,
@@ -89,6 +90,7 @@ class ShaderSurface extends StatefulWidget {
 
   /// Flutter 的坐标系是左上角为原点，Y 轴向下递增，展示的着色器会上下颠倒
   /// 所以默认翻转回来，但一些特殊的着色器是不需要翻转的
+  /// TODO: 好像在不同的平台表现不一样？
   /// Flutter's coordinate system has the origin at the top-left corner, with the Y-axis increasing downwards,
   /// which causes the displayed shader to be upside down.
   /// Therefore, it is flipped back by default, but some special shaders do not require flipping
@@ -101,15 +103,30 @@ class ShaderSurface extends StatefulWidget {
 class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProviderStateMixin {
   late final Future<ShaderGraph> _graphFuture;
   late final Ticker _ticker;
-  Duration _elapsed = Duration.zero;
-  RenderShaderSurface? _renderObject;
+  late ShaderGraph graph = widget.graph;
+  late RenderShaderSurface _renderObject;
   final FocusNode _focusNode = FocusNode();
+  Duration _elapsed = Duration.zero;
   late final KeyboardController keyboardController = widget.keyboardController ?? KeyboardController();
 
-  /// 首帧已经渲染了
-  /// Whether the first frame has been presented
+  // 首帧已经渲染了
+  // Whether the first frame has been presented
   bool firstFramePresented = false;
+
+  // 是否可以触发下一次 tick
+  // Whether the next tick can be triggered
   bool canTick = true;
+  List<WidgetInput> get widgetInputs {
+    final inputs = <WidgetInput>[];
+    for (final buffer in graph._buffers) {
+      for (final input in buffer._inputs) {
+        if (input is WidgetInput) {
+          inputs.add(input);
+        }
+      }
+    }
+    return inputs;
+  }
 
   @override
   void reassemble() {
@@ -121,12 +138,12 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
   void initState() {
     super.initState();
     _graphFuture = () async {
-      await widget.graph.init();
-      return widget.graph;
+      await graph.init();
+      return graph;
     }();
     // 遍历所有 buffer 的所有 input，给所有 KeyboardInput 设置 imageProvider
     // For each buffer, set imageProvider for all KeyboardInput
-    for (final buffer in widget.graph._buffers) {
+    for (final buffer in graph._buffers) {
       for (final input in buffer._inputs) {
         if (input is KeyboardInput) {
           input.imageProvider = () => keyboardController.keyboardImage;
@@ -148,9 +165,9 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
       // https://github.com/flutter/flutter/issues/138627
       _elapsed = elapsed;
       if (canTick) {
-        _renderObject?.time = _elapsed.inMicroseconds / 1e6;
+        _renderObject.time = _elapsed.inMicroseconds / 1e6;
         // Schedule the next logical frame number for shaders.
-        _renderObject?.iFrame = _renderObject!.iFrame + 1;
+        _renderObject.iFrame = _renderObject.iFrame + 1;
         canTick = false;
       }
     });
@@ -171,6 +188,7 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
   }
 
   void _onFramePresented(int renderedIFrame) {
+    // log('Frame $renderedIFrame presented');
     if (!firstFramePresented) firstFramePresented = true;
     canTick = true;
     // Advance keyboard one-frame pulses exactly once per presented frame.
@@ -208,7 +226,7 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
         if (event is KeyDownEvent) {
           keyboardController.onKeyDown(event);
         } else if (event is KeyUpEvent) {
-          keyboardController.onKeyUp(event, _renderObject!.iFrame);
+          keyboardController.onKeyUp(event, _renderObject.iFrame);
         }
         return KeyEventResult.handled;
       },
@@ -219,18 +237,16 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
           onPointerMove: (event) {
             final localPos = box().globalToLocal(event.position);
             final ro = _renderObject;
-            if (ro == null) return;
             ro.iMouse = ro.iMouse.copyWith(x: localPos.dx, y: localPos.dy);
           },
           onPointerDown: (event) {
             _focusNode.requestFocus();
             final localPos = box().globalToLocal(event.position);
-            _renderObject?.iMouse = IMouse(localPos.dx, localPos.dy, localPos.dx, localPos.dy);
+            _renderObject.iMouse = IMouse(localPos.dx, localPos.dy, localPos.dx, localPos.dy);
           },
           onPointerUp: (event) {
             final localPos = box().globalToLocal(event.position);
             final ro = _renderObject;
-            if (ro == null) return;
             ro.iMouse = ro.iMouse.copyWith(
               x: localPos.dx,
               y: localPos.dy,
@@ -241,7 +257,7 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
           behavior: HitTestBehavior.translucent,
           child: RepaintBoundary(
             child: ShaderSurfaceRenderObject(
-              graph: widget.graph,
+              graph: graph,
               dpr: MediaQuery.devicePixelRatioOf(context),
               onRenderObjectCreated: (ro) {
                 _renderObject = ro;
@@ -249,6 +265,17 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
                 ro.iFrame = 0;
               },
               onFramePresented: _onFramePresented,
+              children: [
+                for (final input in widgetInputs)
+                  SnapshotSampler(
+                    (image, size, canvas) {
+                      // SnapshotSampler disposes `image` after the callback.
+                      // Clone so ShaderGraph can keep and sample it later in the frame.
+                      input.lastImage = image.clone();
+                    },
+                    child: SizedBox.expand(child: input.widget),
+                  ),
+              ],
             ),
           ),
         );

@@ -6,8 +6,8 @@ export 'src/foundation/filter_mode.dart';
 export 'src/foundation/wrap_mode.dart';
 
 // import '' is same as import 'shader_graph.dart'
-// shader_surface will use KeyboardController
 import '';
+import 'src/rendering/animated_sampler.dart';
 import 'src/foundation/shader_input.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';

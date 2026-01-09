@@ -50,6 +50,15 @@ class ShaderBuffer extends ChangeNotifier {
 
   final List<ShaderInput> _inputs = [];
 
+  ShaderBuffer feedWidgetInput(
+    Widget widget, {
+    WrapMode wrap = WrapMode.clamp,
+    FilterMode filter = FilterMode.linear,
+  }) {
+    _inputs.add(WidgetInput(widget: widget, wrap: wrap, filter: filter));
+    return this;
+  }
+
   /// 添加一个 ShaderBuffer 作为输入，对应 shader 里的 iChannelN
   /// Adding a ShaderBuffer as input, corresponding to iChannelN in the shader
   ShaderBuffer feedShader(
@@ -139,21 +148,29 @@ class ShaderBuffer extends ChangeNotifier {
   ///
   /// 注意：这一步需要在渲染任何 buffer 之前完成，否则 usePreviousFrame
   /// 可能会读到“上上帧”（两帧延迟），进而导致反馈发散。
+  ///
   /// 这里之前花了很长的时间，去调试着色器渲染异常的问题
-  /// 之前在 render 中将 _prevOutput 推进，这样会导致同一帧中
+  /// 之前在 render 中将 _prevOutput 推进，这样会导致同一帧中读到当前帧序列的输入，
   /// 一些着色器拿到的是当前的输入，而对于 BufferX->BufferX 的反馈
   /// 是需要 PingPong 机制的。就像乒乓球
-  /// 最简单的验证，就是把这段注释掉，然后运行 Brick Game 这个游戏
+  /// 最简单的验证，就是把 _beginFrame 注释掉，把 Render(_Sync) 中对应的代码放开注释
+  /// 然后运行 Brick Game 这个游戏
   ///
   /// Beginning of each frame, advance the feedback chain:
   /// prevOutput <- output
   ///
-  /// Note: This must be done before rendering any buffers,
-  /// or usePreviousFrame may read from "two frames ago", causing feedback divergence.
-  /// This previously took a long time to debug shader rendering issues.
-  /// Previously, _prevOutput was advanced in render(), which caused some shaders
-  /// in the same frame to receive current inputs, while feedback for BufferX->BufferX
-  /// requires a PingPong mechanism, like table tennis.
+  /// Note: This step must be done before rendering any buffers,
+  /// otherwise usePreviousFrame may read from "the frame before last"
+  /// (two-frame delay), leading to feedback divergence.
+  ///
+  /// Previously, I spent a long time debugging shader rendering issues.
+  /// By advancing _prevOutput in render, it caused some shaders
+  /// to read the current frame's input within the same frame sequence.
+  /// For BufferX->BufferX feedback, a PingPong mechanism is needed,
+  /// like in table tennis.
+  /// The simplest test is to comment out _beginFrame,
+  /// and uncomment the corresponding code in Render(_Sync),
+  /// then run the Brick Game.
   void _beginFrame() {
     _prevOutput?.dispose();
     _prevOutput = _output;
@@ -242,7 +259,9 @@ class ShaderBuffer extends ChangeNotifier {
     }
   }
 
+  int index = 0;
   void renderShader({required RenderData data}) {
+    index = 0;
     // Render target size.
     final renderSize = fixedOutputSize ?? (data.logicalSize * data.dpr * scale);
 
@@ -251,8 +270,8 @@ class ShaderBuffer extends ChangeNotifier {
     final uniformSize = useSurfaceSizeForIResolution ? surfaceSize : renderSize;
     Stopwatch stopwatch = Stopwatch()..start();
     _shader!
-      ..setFloat(0, uniformSize.width)
-      ..setFloat(1, uniformSize.height);
+      ..setFloat(index++, uniformSize.width)
+      ..setFloat(index++, uniformSize.height);
 
     // ShaderStoy 语义下的 iMouse 需要基于 buffer 的 iResolution 坐标系进行调整。
     // 我们的 pointer 事件是基于 widget 逻辑像素的，但 buffer 可能有 fixedOutputSize（例如 112x14）。
@@ -270,12 +289,12 @@ class ShaderBuffer extends ChangeNotifier {
     final mw = data.iMouse.w * sy;
 
     _shader!
-      ..setFloat(2, data.time)
-      ..setFloat(3, data.iFrame)
-      ..setFloat(4, mx)
-      ..setFloat(5, my)
-      ..setFloat(6, mz)
-      ..setFloat(7, mw);
+      ..setFloat(index++, data.time)
+      ..setFloat(index++, data.iFrame)
+      ..setFloat(index++, mx)
+      ..setFloat(index++, my)
+      ..setFloat(index++, mz)
+      ..setFloat(index++, mw);
 
     // Optional Shadertoy-style per-channel wrap modes.
     // Encoded into a vec4 `iChannelWrap` (x/y/z/w == channel 0..3).
@@ -330,8 +349,6 @@ class ShaderBuffer extends ChangeNotifier {
       sizes[i * 2 + 1] = image.height.toDouble();
     }
 
-    int index = 8;
-
     // Each block is try/catch for compatibility with shaders that don't declare these uniforms.
     try {
       _shader!
@@ -341,11 +358,7 @@ class ShaderBuffer extends ChangeNotifier {
         ..setFloat(index++, wrapModes[3]);
     } catch (_) {
       // Intentionally ignored.
-    } finally {
-      // Advance regardless to keep layout consistent.
-      index = 12;
     }
-
     try {
       _shader!
         ..setFloat(index++, filterModes[0])
@@ -354,8 +367,6 @@ class ShaderBuffer extends ChangeNotifier {
         ..setFloat(index++, filterModes[3]);
     } catch (_) {
       // Intentionally ignored.
-    } finally {
-      index = 16;
     }
 
     try {
@@ -385,6 +396,7 @@ class ShaderBuffer extends ChangeNotifier {
 
   @override
   void dispose() {
+    log('Disposing ShaderBuffer: $shaderAssetPath');
     _output?.dispose();
     _prevOutput?.dispose();
     _output = null;
