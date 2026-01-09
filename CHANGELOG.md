@@ -1,3 +1,7 @@
+## 0.0.6(2026.01.09)
+
+- Support input Widget to ShaderBuffer
+
 ## 0.0.5(2026.01.04)
 
 - Support set input filter mode(Nearest / Linear).
