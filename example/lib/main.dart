@@ -1,14 +1,16 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'game/bricks_game.dart';
-import 'float_example.dart';
-import 'iframe_example.dart';
-import 'keyboard_example.dart';
-import 'mouse_example.dart';
-import 'multi_pass.dart';
-import 'game/pacman_game.dart';
-import 'text_render_example.dart';
-import 'wrap_example.dart';
+import 'examples/game.dart';
+import 'examples/games/bricks_game.dart';
+import 'examples/float.dart';
+import 'examples/iframe.dart';
+import 'examples/keyboard_input.dart';
+import 'examples/mouse_input.dart';
+import 'examples/multi_pass.dart';
+import 'examples/games/pacman_game.dart';
+import 'examples/text_render.dart';
+import 'examples/widget_input.dart';
+import 'examples/wrap.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,7 +45,7 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> {
-  int currentIndex = 8;
+  int currentIndex = 4;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +59,18 @@ class _RootPageState extends State<RootPage> {
       Text('iFrame'),
       Text('Multi-Pass'),
       Text('Float Support'),
+      '',
+    ];
+    final tabTitles = [
+      'Game',
+      'Widget Input',
+      'Keyboard Input',
+      'Mouse Input',
+      'Wrap & Filter',
+      'Text Render',
+      'iFrame',
+      'Multi-Pass Rendering',
+      'Float Support Example',
     ];
     return CupertinoPageScaffold(
       backgroundColor: Color(0xfff3f5f9),
@@ -74,7 +88,7 @@ class _RootPageState extends State<RootPage> {
               }
             },
             children: {
-              for (var i = 0; i < tabs.length; i++) i: tabs[i],
+              for (var i = 0; i < tabTitles.length; i++) i: Text(tabTitles[i]),
             },
           ),
         ),
@@ -90,8 +104,8 @@ class _RootPageState extends State<RootPage> {
             width: width,
             height: height,
             child: [
-              BricksGame(),
-              PacmanGame(),
+              GameExample(),
+              WidgetInputExample(),
               KeyboardExample(),
               MouseExample(),
               WrapExample(),

@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:shader_graph/shader_graph.dart';
 
+/// 没移植成功
+/// Contra Game ported failed currently
 class ContraGame extends StatelessWidget {
   const ContraGame({super.key});
 

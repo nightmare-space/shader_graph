@@ -1,4 +1,12 @@
+import 'dart:ui';
+import 'dart:ui' as ui;
+
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_shaders/flutter_shaders.dart' hide AnimatedSampler;
 import 'package:shader_graph/shader_graph.dart';
 
 class WrapExample extends StatefulWidget {
@@ -12,13 +20,13 @@ class _WrapExampleState extends State<WrapExample> {
   int currentIndex = 0;
   @override
   Widget build(BuildContext context) {
-    final tabs = [
-      Text('Raw Image'),
-      Text('Transition Burning'),
-      Text('Tissue'),
-      Text('Black Hole ODE Geodesic Solver'),
-      Text('Broken Time Gate'),
-      Text('Goodbye Dream Clouds'),
+    final tabTitles = [
+      'Raw Image',
+      'Transition Burning',
+      'Tissue',
+      'Black Hole ODE Geodesic Solver',
+      'Broken Time Gate',
+      'Goodbye Dream Clouds',
     ];
 
     return SafeArea(
@@ -38,7 +46,7 @@ class _WrapExampleState extends State<WrapExample> {
                   }
                 },
                 children: {
-                  for (var i = 0; i < tabs.length; i++) i: tabs[i],
+                  for (var i = 0; i < tabTitles.length; i++) i: Text(tabTitles[i]),
                 },
               ),
             ),
@@ -102,6 +110,7 @@ class _WrapExampleState extends State<WrapExample> {
     );
   }
 
+  bool useWidgetInput = true;
   Builder buildTransitionBurning() {
     return Builder(
       builder: (context) {
@@ -109,6 +118,26 @@ class _WrapExampleState extends State<WrapExample> {
         final texture1 = 'assets/textures/Rock Tiles.jpg';
         final texture2 = 'assets/textures/Pebbles.png';
         Widget buildShaderSurface(String title, WrapMode wrap) {
+          final buffer = shaderPath.shaderBuffer;
+          final assetsInputShader = shaderPath.feed(texture1, wrap: wrap).feed(texture2, wrap: wrap);
+
+          dynamic input1, input2;
+          if (useWidgetInput) {
+            input1 = Image.asset(
+              texture1,
+              fit: BoxFit.cover,
+            );
+            input2 = Image.asset(
+              texture2,
+              fit: BoxFit.cover,
+            );
+          } else {
+            input1 = texture1;
+            input2 = texture2;
+          }
+          buffer.feed(input1, wrap: wrap);
+          buffer.feed(input2, wrap: wrap);
+
           return Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -124,8 +153,8 @@ class _WrapExampleState extends State<WrapExample> {
                         width: constraints.maxWidth,
                         height: constraints.maxHeight,
                         child: ShaderSurface.auto(
-                          key: UniqueKey(),
-                          shaderPath.feed(texture1, wrap: wrap).feed(texture2, wrap: wrap),
+                          assetsInputShader,
+                          upSideDown: false,
                         ),
                       );
                     },
@@ -340,9 +369,27 @@ class _WrapExampleState extends State<WrapExample> {
   LayoutBuilder buildRawImageWrap() {
     const String shader = 'shaders/wrap/Wrap Debug.frag';
     const String texture = 'assets/textures/Rock Tiles.jpg';
-    final clamp = shader.feed(texture, wrap: .clamp);
-    final repeat = shader.feed(texture, wrap: .repeat);
-    final mirror = shader.feed(texture, wrap: .mirror);
+
+    Widget assetImage = Image.asset(
+      texture,
+      fit: BoxFit.cover,
+    );
+    // final clamp = shader.feed(texture, wrap: .clamp);
+    // final repeat = shader.feed(texture, wrap: .repeat);
+    // final mirror = shader.feed(texture, wrap: .mirror);
+
+    final clamp = shader.feed(
+      assetImage,
+      wrap: .clamp,
+    );
+    final repeat = shader.feed(
+      assetImage,
+      wrap: .repeat,
+    );
+    final mirror = shader.feed(
+      assetImage,
+      wrap: .mirror,
+    );
     Widget panel(String title, ShaderBuffer buffer) {
       return Expanded(
         child: Column(

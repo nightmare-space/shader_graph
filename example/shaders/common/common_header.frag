@@ -152,17 +152,22 @@ vec2 sg_texelCenterUv(ivec2 ipos, vec2 sizePx) {
 #define SG_TEX2(tex, uv) SG_SAMPLE_FILTER((tex), (uv), iChannelWrap.z, iChannelFilter.z, SG_CHANNEL_SIZE2)
 #define SG_TEX3(tex, uv) SG_SAMPLE_FILTER((tex), (uv), iChannelWrap.w, iChannelFilter.w, SG_CHANNEL_SIZE3)
 
-
-
-
-// TODO:
 // 非常奇怪，在编写的过程中，传递 sampler2D 在 awesome_flutter_shaders 的 runtime 下正常
 // 但是在当前 example 中有运行报错
+// 2026.01.5: 因为当前项目没有启用 Impeller，Mac 需要在 Info.plist 中添加
+// <key>FLTEnableImpeller</key>
+// <true />
+// 启用 Impeller 后，支持传递 sampler2D 了, 但先选择使用宏定义版本以保证兼容性
 //
 // It's very strange that passing sampler2D works fine in awesome_flutter_shaders runtime
 // but causes runtime error in the current example
 // Filtered sampling: 0=linear, 1=nearest. (2=mipmap reserved)
 // Implemented shader-side to avoid relying on backend sampler state.
+// 2026.01.5: Because the current project doesn't enable Impeller, on Mac you need to add
+// <key>FLTEnableImpeller</key>
+// <true />
+// to Info.plist to enable Impeller.
+// After enabling Impeller, passing sampler2D is supported, but we still choose to use macro version for compatibility.
 vec4 sg_sample_filter(sampler2D tex, vec2 uv, float wrapMode, float filterMode, vec2 sizePx) {
     if (filterMode < 0.5) {
         return SG_SAMPLE_LINEAR(tex, uv, wrapMode, sizePx);
