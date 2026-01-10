@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:shader_graph/shader_graph.dart';
-import 'package:shader_graph/src/foundation/shader_input.dart';
 
 /// DSL 扩展，方便通过字符串创建 ShaderBuffer 及其链式调用。
 /// DSL extension to create ShaderBuffer and chain calls via String.

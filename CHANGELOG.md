@@ -1,4 +1,5 @@
-## 0.0.7(2026.01.10)
+## 0.1.0(2026.01.10)
+
 - Support ShaderController for play/pause control.
 - Fixed the serious issue of inability to render brought by the previous version 
 
