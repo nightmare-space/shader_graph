@@ -8,15 +8,13 @@ It is now even capable of running a **fully shader-driven game**.
 
 This framework connects multiple `.frag` shaders using a **render graph** model, fully supporting Shadertoy-style BufferA / BufferB / Main passes, as well as feedback / ping-pong patterns.
 
-It supports keyboard input, mouse input, image input, and Shadertoy-style wrap modes (Clamp / Repeat / Mirror).
+It supports keyboard input, mouse input, image input, widget input, and Shadertoy-style wrap modes (Clamp / Repeat / Mirror), filter modes, etc.
 
 If you only want to quickly display a shader, you can directly use a simple widget (for example, `ShaderSurface.auto`).
 
 When you need more complex pipelines (multi-pass / multiple inputs / feedback / ping-pong), you should explicitly declare inputs and dependencies using `ShaderBuffer`.
 
-The framework handles topological scheduling and per-frame execution, and passes the output of each pass downstream as a `ui.Image`.
-
-English | [中文](README-CH.md)
+English | [中文](README.zh.md)
 
 ---
 
@@ -46,7 +44,7 @@ The source code of `shader_graph` itself includes extensive Chinese and English 
   - [x] Nearest / Linear: basically supported, with minor differences
   - [ ] Mipmap: not supported yet; exploring mipmap-like approaches feasible in Flutter
 - [x] Support rendering a Widget into a texture and using it as a buffer input
-- [ ] Animation control
+- [x] Animation control (ShaderController for play/pause functionality)
 
 ---
 
@@ -66,7 +64,7 @@ Provided by `common_header.frag`:
 - `SG_TEXELFETCH`
 - `SG_TEXELFETCH0..3`
 
-These macros replace native `texelFetch` calls and automatically obtain channel resolutions via `iChannelResolution0..3`. 
+These macros replace native `texelFetch` calls and automatically obtain channel resolutions via `iChannelResolution0..3`.
 
 ---
 
@@ -198,7 +196,8 @@ Example code can be found at: [example](example/lib/main.dart)
 
 ### Minimal runnable examples
 
-**1) Single shader (Widget)**
+#### 1) Single shader (Widget)
+
 ```dart
 SizedBox(
   height: 240,
@@ -207,8 +206,10 @@ SizedBox(
 )
 ```
 
-**2) Two passes (A → Main)**
+#### 2) Two passes (A → Main)
+
 See [multi_pass.dart](example/lib/multi_pass.dart)
+
 ```dart
 ShaderSurface.builder(() {
   final bufferA = '$shader_asset_buffera'.shaderBuffer;
@@ -217,8 +218,10 @@ ShaderSurface.builder(() {
 })
 ```
 
-**3) feedback (A → A, plus a Main display)**
+#### 3) feedback (A → A, plus a Main display)
+
 See [bricks_game.dart](example/lib/game/bricks_game.dart)
+
 ```dart
 ShaderSurface.builder(() {
   final bufferA = '$asset_shader_buffera'.feedback().feedKeyboard();
@@ -266,7 +269,7 @@ ShaderSurface.builder(() {
 ShaderSurface.buffers([bufferA, bufferB, mainBuffer]);
 ```
 
-### ShaderBuffer.feed
+## ShaderBuffer.feed
 
 ShaderBuffer supports multiple input sources to simulate iChannel behavior in Shadertoy.
 
@@ -279,7 +282,7 @@ Currently supported input types include:
 - Mouse input
 - Built-in uniforms such as time and resolution
 
-`ShaderBuffer.feed` is used to bind __an input source__ to the current `ShaderBuffer`. Based on the type passed in, it ultimately calls the corresponding method. If it's a string, it determines the method based on the string suffix:
+`ShaderBuffer.feed` is used to bind **an input source** to the current `ShaderBuffer`. Based on the type passed in, it ultimately calls the corresponding method. If it's a string, it determines the method based on the string suffix:
 
 - `feedWidgetInput(Widget)`
 - `feedShader(ShaderBuffer)`
@@ -288,14 +291,14 @@ Currently supported input types include:
 
 Of course, you can also directly call the original APIs.
 
-**Adding a Widget as input**
+### Adding a Widget as input
 
 ```dart
 final imageWidget = Text('Hello Flutter ShaderGraph!');
 buffer.feed(imageWidget);
 ```
 
-**Adding another shader as input**
+### Adding another shader as input
 
 ```dart
 final otherBuffer = '$other_shader_asset_path'.shaderBuffer;
@@ -305,13 +308,13 @@ final otherBuffer = ShaderBuffer('$other_shader_asset_path');
 buffer.feedShader(otherBuffer);
 ```
 
-**Adding keyboard as input**
+### Adding keyboard as input
 
 ```dart
 buffer.feedKeyboard();
 ```
 
-**Adding an image asset as input**
+### Adding an image asset as input
 
 > Typically used to input noise, textures, etc.
 
@@ -342,7 +345,7 @@ final buffer = '$shader_asset_path'.shaderBuffer
   .feedKeyboard();
 ```
 
-**feedback / ping-pong**
+### feedback / ping-pong
 
 In Shadertoy, feedback is a very common pattern, for example:
 
@@ -371,7 +374,7 @@ final bufferA =
     .feedKeyboard();
 ```
 
-__Custom inputs__
+### Custom ShaderInput
 
 Currently, customization space is limited, and there is no suitable callback timing for developers to update. However, by implementing a `ShaderInput`, custom input sources can still be achieved. For example, camera output streams, audio streams, etc., may be implemented in the future.
 
@@ -560,9 +563,8 @@ Or:
    └─────────┘
 ```
 
-`ShaderSurface` provides `builder` to handle these cases. Used like this, you
-won't need multiple `Builder(Flutter)`.
-> Builder doesn't disappear; it just moves.
+
+For such multi-pass scenarios, you can use `ShaderSurface.builder` to build the entire render graph.
 
 ```dart
 ShaderSurface.builder(() {
@@ -573,6 +575,65 @@ ShaderSurface.builder(() {
   return [bufferA, mainBuffer];
 })
 ```
+
+## Animation Control
+
+ShaderController provides simple play/pause functionality for shader animations.
+
+### Basic Usage
+
+```dart
+// Create a controller
+final controller = ShaderController();
+
+// Use with ShaderSurface
+ShaderSurface.auto(
+  'shaders/wrap/Transition Burning.frag',
+  shaderController: controller,
+);
+
+// Control playback
+controller.pause();   // Pause animation
+controller.resume();  // Resume animation  
+controller.toggle();  // Toggle play/pause state
+
+// Check current state
+bool isPaused = controller.isPaused;
+```
+
+### Integration
+
+ShaderController can be passed to all ShaderSurface factory methods:
+
+```dart
+// With ShaderSurface.auto
+ShaderSurface.auto(
+  'shaders/example.frag',
+  shaderController: controller,
+);
+
+// With ShaderSurface.builder  
+ShaderSurface.builder(
+  () {
+    final bufferA = 'shaders/BufferA.frag'.shaderBuffer.feedback();
+    final main = 'shaders/Main.frag'.shaderBuffer.feed(bufferA);
+    return [bufferA, main];
+  },
+  shaderController: controller,
+);
+
+// With ShaderSurface.buffers
+ShaderSurface.buffers(
+  [bufferA, mainBuffer],
+  shaderController: controller,
+);
+```
+
+### Behavior
+
+- When paused: Time stops advancing, but rendering continues using the last time value
+- When resumed: Time continues from where it left off
+- The controller is automatically managed by ShaderSurface's lifecycle
 
 ## Topological Sorting
 
@@ -1017,4 +1078,3 @@ float keyDown(int keyCode) {
 
 - `.github/prompts/port_shader.prompt.md`
 - `.github/prompts/port_shader_float.prompt.md`
-

@@ -1,3 +1,7 @@
+## 0.0.7(2026.01.10)
+- Support ShaderController for play/pause control.
+- Fixed the serious issue of inability to render brought by the previous version 
+
 ## 0.0.6(2026.01.09)
 
 - Support input Widget to ShaderBuffer

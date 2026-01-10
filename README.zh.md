@@ -8,13 +8,11 @@
 
 该框架通过「渲染图（Render Graph）」的方式，将多个 `.frag` 串联执行，完整支持 Shadertoy 风格的 BufferA / BufferB / Main、feedback / ping-pong 等模型。
 
-支持键盘输入、鼠标输入、图片输入，并支持 Shadertoy 风格的 Wrap（Clamp / Repeat / Mirror）。
+支持键盘输入、鼠标输入、图片输入，Widget 输入，并支持 Shadertoy 风格的 Wrap（Clamp / Repeat / Mirror）。
 
 如果你只是想快速把一个着色器显示出来，可以直接使用简单的 Widget（例如 `ShaderSurface.auto`）。
 
 当你需要更复杂的链路（多 Pass / 多输入 / feedback / ping-pong）时，再使用 `ShaderBuffer` 显式声明输入与依赖关系。
-
-框架会负责拓扑调度与逐帧执行，并把每个 pass 的输出作为 `ui.Image` 传递给下游。
 
 [English](README.md) | 中文
 
@@ -44,8 +42,8 @@
 - [x] 支持 Shadertoy 风格的 Filter（Linear / Nearest / Mipmap）
   - [x] Nearest / Linear：已基本支持，存在轻微差异
   - [ ] Mipmap：暂不支持，探索 Flutter 中可落地的 mipmap-like 方案
-- [ ] 支持将 Widget 渲染为纹理，再作为 Buffer 输入
-- [ ] 动画控制
+- [x] 支持将 Widget 渲染为纹理，再作为 Buffer 输入
+- [x] 动画控制（ShaderController 提供播放/暂停功能）
 
 ---
 
@@ -160,7 +158,8 @@ Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状�
 我以前对着色器的理解一直比较模糊。朋友推荐我阅读  
 [The Book of Shaders](https://thebookofshaders.com/)，我看了一部分，但始终没能真正理解其中的原理。
 
-但我觉得 Shadertoy 上的着色器实在太有趣了，有些作品甚至本身就是一个完整的游戏，这让我产生了一个想法：  
+但我觉得 Shadertoy 上的着色器实在太有趣了，有些作品甚至本身就是一个完整的游戏，这让我产生了一个想法：
+
 **能不能把这些着色器移植到 Flutter 上运行？**
 
 首先要感谢 [shader_buffers](https://github.com/alnitak/shader_buffers) 的作者。正是这个项目，让我最初能够把一些 Shadertoy 的着色器代码移植到 Flutter 中运行。
@@ -175,7 +174,8 @@ Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状�
 
 ## 快速开始
 
-首先需要明确一点：  
+首先需要明确一点：
+
 **Shadertoy 的着色器代码必须经过移植，才能在 Flutter 中运行。**
 
 项目中提供了辅助移植的 Prompt：  
@@ -196,7 +196,7 @@ Follow instructions in [port_shader.prompt.md](.github/prompts/port_shader.promp
 
 ### 最小可运行示例
 
-### 1) 单 Shader（Widget）
+#### 1) 单 Shader（Widget）
 
 ```dart
 SizedBox(
@@ -206,7 +206,7 @@ SizedBox(
 )
 ```
 
-### 2) 两个 Pass（A → Main）
+#### 2) 两个 Pass（A → Main）
 
 见 [multi_pass.dart](example/lib/multi_pass.dart)
 
@@ -218,7 +218,7 @@ ShaderSurface.builder(() {
 })
 ```
 
-### 3) feedback（A → A → Main）
+#### 3) feedback（A → A → Main）
 
 见 [bricks_game.dart](example/lib/game/bricks_game.dart)
 
@@ -269,7 +269,7 @@ ShaderSurface.builder(() {
 ShaderSurface.buffers([bufferA, bufferB, mainBuffer]);
 ```
 
-### ShaderBuffer.feed
+## ShaderBuffer.feed
 
 ShaderBuffer 支持多种输入源，用于模拟 Shadertoy 中的 iChannel 行为。
 
@@ -291,14 +291,14 @@ ShaderBuffer 支持多种输入源，用于模拟 Shadertoy 中的 iChannel 行�
 
 当然，你也可以直接调用原始的 API
 
-**添加 Widget 作为输入**
+### 添加 Widget 作为输入
 
 ```dart
 final imageWidget = Text('Hello Flutter ShaderGraph!');
 buffer.feed(imageWidget);
 ```
 
-**添加另一个着色器作为输入**
+### 添加另一个着色器作为输入
 
 ```dart
 final otherBuffer = '$other_shader_asset_path'.shaderBuffer;
@@ -308,13 +308,13 @@ final otherBuffer = ShaderBuffer('$other_shader_asset_path');
 buffer.feedShader(otherBuffer);
 ```
 
-**添加键盘作为输入**
+### 添加键盘作为输入
 
 ```dart
 buffer.feedKeyboard();
 ```
 
-**添加资源图片作为输入**
+### 添加资源图片作为输入
 
 > 通常用来输入噪声、纹理等
 
@@ -345,7 +345,7 @@ final buffer = '$shader_asset_path'.shaderBuffer
   .feedKeyboard();
 ```
 
-**feedback / ping-pong**
+### feedback / ping-pong
 
 在 Shadertoy 中，feedback 是一个非常常见的模式，例如：
 
@@ -374,7 +374,7 @@ final bufferA =
     .feedKeyboard();
 ```
 
-**自定义输入**
+### 自定义输入
 
 目前自定义空间有限，且没有合适的回调开发者更新的时机，但如果实现一个 `ShaderInput`，仍然可以实现自定义输入源。例如相机的输出流、音频流等，后续可能会实现
 
@@ -442,7 +442,6 @@ buffer.fixedOutputSize = const Size(64, 64);
 - 物理输出尺寸 = 逻辑宽度 × 4（RGBA8 feedback）
 
 ---
-
 
 ## ShaderSurface.auto
 
@@ -526,6 +525,7 @@ Column(
   ],
 )
 ```
+
 ## ShaderSurface.builder
 
 当存在复杂的多 Pass 依赖关系时，应使用 `ShaderSurface.builder`。
@@ -536,7 +536,9 @@ Column(
 │ ↺ A │    └─────┘    └─────┘
 └─────┘
 ```
+
 或者
+
 ```text
 ┌──────────── Shader A ────────────┐
 │                                  │
@@ -560,8 +562,7 @@ Column(
    └─────────┘
 ```
 
-
-示例：
+这种多 Pass 场景下，`ShaderSurface.builder` 提供了一个回调函数，允许你在其中创建和配置多个 `ShaderBuffer`，并返回它们的列表。
 
 ```dart
 ShaderSurface.builder(() {
@@ -572,6 +573,65 @@ ShaderSurface.builder(() {
   return [bufferA, mainBuffer];
 })
 ```
+
+## 动画控制
+
+ShaderController 为着色器动画提供简单的播放/暂停功能。
+
+### 基本用法
+
+```dart
+// 创建控制器
+final controller = ShaderController();
+
+// 与 ShaderSurface 一起使用
+ShaderSurface.auto(
+  'shaders/wrap/Transition Burning.frag',
+  shaderController: controller,
+);
+
+// 控制播放状态
+controller.pause();   // 暂停动画
+controller.resume();  // 恢复动画  
+controller.toggle();  // 切换播放/暂停状态
+
+// 检查当前状态
+bool isPaused = controller.isPaused;
+```
+
+### 集成方式
+
+ShaderController 可以传递给所有 ShaderSurface 工厂方法：
+
+```dart
+// 与 ShaderSurface.auto 一起使用
+ShaderSurface.auto(
+  'shaders/example.frag',
+  shaderController: controller,
+);
+
+// 与 ShaderSurface.builder 一起使用  
+ShaderSurface.builder(
+  () {
+    final bufferA = 'shaders/BufferA.frag'.shaderBuffer.feedback();
+    final main = 'shaders/Main.frag'.shaderBuffer.feed(bufferA);
+    return [bufferA, main];
+  },
+  shaderController: controller,
+);
+
+// 与 ShaderSurface.buffers 一起使用
+ShaderSurface.buffers(
+  [bufferA, mainBuffer],
+  shaderController: controller,
+);
+```
+
+### 行为说明
+
+- 暂停时：时间停止前进，但渲染继续使用最后的时间值
+- 恢复时：时间从暂停的位置继续
+- 控制器由 ShaderSurface 的生命周期自动管理
 
 ## 拓扑排序
 
@@ -636,6 +696,7 @@ class _PacmanGameState extends State<PacmanGame> {
 我在本机测试时，应用运行一段时间会持续吃掉物理内存并开始占用 Swap，最终占用会变得非常夸张。（超过200GB）
 
 当前工程的规避方式：
+
 - 改用异步的 `toImage()`（避免 `toImageSync` 的高风险路径）
 - 但不能每一帧都触发一次转图，否则仍会造成巨大开销
 - 因此用 Ticker/节流策略：只在“新的一帧 image 准备好”之后再触发下一次更新
@@ -658,7 +719,9 @@ Dart 侧的整体设计，几乎完全按照我的想法来推进。
 - 功能足够强  
 - 设计结构清晰  
 - 工程代码可读  
-- 大量中英文注释，适合学习与二次开发 
+- 大量中英文注释，适合学习与二次开发
+
+---
 
 ## ShaderToy → Flutter（shader_graph）迁移与 Feedback/Wrap 指南
 
