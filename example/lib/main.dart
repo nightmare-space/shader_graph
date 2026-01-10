@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'examples/game.dart';
 import 'examples/games/bricks_game.dart';
+import 'examples/animation_controll.dart';
 import 'examples/float.dart';
 import 'examples/iframe.dart';
 import 'examples/keyboard_input.dart';
@@ -49,18 +50,6 @@ class _RootPageState extends State<RootPage> {
 
   @override
   Widget build(BuildContext context) {
-    final tabs = [
-      Text('Bricks Game'),
-      Text('Pacman Game'),
-      Text('Keyboard'),
-      Text('Mouse'),
-      Text('Wrap & Filter'),
-      Text('Text Render'),
-      Text('iFrame'),
-      Text('Multi-Pass'),
-      Text('Float Support'),
-      '',
-    ];
     final tabTitles = [
       'Game',
       'Widget Input',
@@ -68,9 +57,9 @@ class _RootPageState extends State<RootPage> {
       'Mouse Input',
       'Wrap & Filter',
       'Text Render',
-      'iFrame',
-      'Multi-Pass Rendering',
-      'Float Support Example',
+      'Animation Controller',
+      'Multi-Pass',
+      'Float Support',
     ];
     return CupertinoPageScaffold(
       backgroundColor: Color(0xfff3f5f9),
@@ -110,7 +99,7 @@ class _RootPageState extends State<RootPage> {
               MouseExample(),
               WrapExample(),
               TextRenderExample(),
-              IframeExample(),
+              AnimationControlExample(),
               MultiPassExample(),
               FloatExample(),
             ][currentIndex],
