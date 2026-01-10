@@ -2,6 +2,7 @@ library shader_graph;
 
 export 'src/extension/dsl.dart';
 export 'src/controller/keyboard_controller.dart';
+export 'src/controller/shader_controller.dart';
 export 'src/foundation/filter_mode.dart';
 export 'src/foundation/wrap_mode.dart';
 
