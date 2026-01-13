@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'dart:ui' as ui;
 
+import 'package:example/main.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -29,88 +30,118 @@ class _WrapExampleState extends State<WrapExample> {
       'Goodbye Dream Clouds',
     ];
 
-    return SafeArea(
-      child: Column(
-        children: [
-          CupertinoNavigationBar(
-            middle: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: CupertinoSlidingSegmentedControl(
-                // isMomentary: true,
-                proportionalWidth: true,
-                groupValue: currentIndex,
-                onValueChanged: (int? value) {
-                  if (value != null) {
-                    currentIndex = value;
-                    setState(() {});
-                  }
-                },
-                children: {
-                  for (var i = 0; i < tabTitles.length; i++) i: Text(tabTitles[i]),
-                },
-              ),
+    return Column(
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        CupertinoNavigationBar(
+          middle: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: CupertinoSlidingSegmentedControl(
+              // isMomentary: true,
+              proportionalWidth: true,
+              groupValue: currentIndex,
+              onValueChanged: (int? value) {
+                if (value != null) {
+                  currentIndex = value;
+                  setState(() {});
+                }
+              },
+              children: {
+                for (var i = 0; i < tabTitles.length; i++) i: Text(tabTitles[i]),
+              },
             ),
           ),
-          Expanded(
-            child: [
-              buildRawImageWrap(),
-              buildTransitionBurning(),
-              buildTissue(),
-              buildBlackHoleODEGeodesicSolver(),
-              buildBrokenTime(),
-              buildGoodbyeDreamClouds(),
-            ][currentIndex],
-          ),
-        ],
-      ),
+        ),
+        Expanded(
+          child: [
+            buildRawImageWrap(),
+            buildTransitionBurning(),
+            buildTissue(),
+            buildBlackHoleODEGeodesicSolver(),
+            buildBrokenTime(),
+            buildGoodbyeDreamClouds(),
+          ][currentIndex],
+        ),
+      ],
     );
   }
 
-  Builder buildBlackHoleODEGeodesicSolver() {
-    return Builder(
-      builder: (context) {
-        final main = 'shaders/wrap/Black Hole ODE Geodesic Solver.frag';
-        final texture = 'assets/textures/Stars.jpg';
-        final width = MediaQuery.sizeOf(context).width / 2;
-        final height = MediaQuery.sizeOf(context).height / 2;
-        Widget shaderSurface(String title, WrapMode wrap, FilterMode filter) {
-          return Expanded(
-            child: Column(
-              mainAxisAlignment: .center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                ),
-                SizedBox(
-                  width: width,
-                  height: height,
-                  child: ShaderSurface.auto(
-                    main.feed(
-                      texture,
-                      wrap: wrap,
-                      filter: filter,
-                    ),
-                  ),
-                ),
-              ],
+  bool useWidgetInput = true;
+
+  LayoutBuilder buildRawImageWrap() {
+    const String shader = 'shaders/wrap/Wrap Debug.frag';
+    const String texture = 'assets/textures/Rock Tiles.jpg';
+
+    Widget assetImage = Image.asset(
+      texture,
+      fit: BoxFit.cover,
+    );
+    // final clamp = shader.feed(texture, wrap: .clamp);
+    // final repeat = shader.feed(texture, wrap: .repeat);
+    // final mirror = shader.feed(texture, wrap: .mirror);
+
+    final clamp = shader.feed(
+      assetImage,
+      wrap: .clamp,
+    );
+    final repeat = shader.feed(
+      assetImage,
+      wrap: .repeat,
+    );
+    final mirror = shader.feed(
+      assetImage,
+      wrap: .mirror,
+    );
+    Widget panel(String title, ShaderBuffer buffer) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            child: ShaderSurface.auto(buffer, upSideDown: true),
+          ),
+        ],
+      );
+    }
+
+    final widgets = [
+      panel('Clamp (default)', clamp),
+      panel('Repeat', repeat),
+      panel('Mirror', mirror),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < narrowWidthThreshold;
+        if (isNarrow) {
+          return SizedBox(
+            height: constraints.maxHeight,
+            child: SingleChildScrollView(
+              child: Column(
+                spacing: 8,
+                children: [
+                  for (var w in widgets) SizedBox(height: constraints.maxWidth, child: w),
+                ],
+              ),
             ),
           );
         }
-
         return Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           spacing: 8,
           children: [
-            shaderSurface('Clamp', .clamp, .nearest),
-            shaderSurface('Repeat', .repeat, .nearest),
+            for (var w in widgets) Expanded(child: w),
           ],
         );
       },
     );
   }
 
-  bool useWidgetInput = true;
   Builder buildTransitionBurning() {
     return Builder(
       builder: (context) {
@@ -138,175 +169,59 @@ class _WrapExampleState extends State<WrapExample> {
           buffer.feed(input1, wrap: wrap);
           buffer.feed(input2, wrap: wrap);
 
-          return Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      child: ShaderSurface.auto(
+                        assetsInputShader,
+                        upSideDown: false,
+                      ),
+                    );
+                  },
                 ),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SizedBox(
-                        width: constraints.maxWidth,
-                        height: constraints.maxHeight,
-                        child: ShaderSurface.auto(
-                          assetsInputShader,
-                          upSideDown: false,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         }
 
-        return Column(
-          children: [
-            Expanded(
-              child: Row(
-                spacing: 8,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  buildShaderSurface('Clamp', .clamp),
-                  buildShaderSurface('Repeat', .repeat),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+        final widgets = [
+          buildShaderSurface('Clamp', .clamp),
+          buildShaderSurface('Repeat', .repeat),
+        ];
 
-  Builder buildBrokenTime() {
-    return Builder(
-      builder: (context) {
-        final main = 'shaders/wrap/Broken Time Gate.frag';
-        final texture = 'assets/textures/Grey Noise Medium.png';
-        Widget buildShaderSurface(String title, WrapMode wrap, FilterMode filter) {
-          return Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                ),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SizedBox(
-                        width: constraints.maxWidth,
-                        height: constraints.maxHeight,
-                        child: ShaderSurface.auto(
-                          main.feed(
-                            texture,
-                            wrap: wrap,
-                            filter: filter,
-                          ),
-                        ),
-                      );
-                    },
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < narrowWidthThreshold;
+            if (isNarrow) {
+              return SizedBox(
+                height: constraints.maxHeight,
+                child: SingleChildScrollView(
+                  child: Column(
+                    spacing: 8,
+                    children: [
+                      for (var w in widgets) SizedBox(height: constraints.maxWidth, child: w),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          );
-        }
-
-        return Column(
-          children: [
-            Expanded(
-              child: Row(
-                spacing: 8,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  buildShaderSurface('Clamp Nearest', .clamp, .nearest),
-                  buildShaderSurface('Repeat Nearest', .repeat, .nearest),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Row(
-                spacing: 8,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  buildShaderSurface('Clamp Linear', .clamp, .linear),
-                  buildShaderSurface('Repeat Linear', .repeat, .linear),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Builder buildGoodbyeDreamClouds() {
-    return Builder(
-      builder: (_) {
-        final shaderPath = 'shaders/wrap/Goodbye Dream Clouds.frag';
-        final texture = 'assets/textures/RGBA Noise Medium.png';
-        Widget buildShaderSurface(String title, WrapMode wrap, FilterMode filter) {
-          return Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              );
+            }
+            return Row(
+              spacing: 8,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                ),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SizedBox(
-                        width: constraints.maxWidth,
-                        height: constraints.maxHeight,
-                        child: ShaderSurface.auto(
-                          key: UniqueKey(),
-                          shaderPath.feed(
-                            texture,
-                            wrap: wrap,
-                            filter: filter,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                for (var w in widgets) Expanded(child: w),
               ],
-            ),
-          );
-        }
-
-        return Column(
-          children: [
-            Expanded(
-              child: Row(
-                spacing: 8,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  buildShaderSurface('Clamp Nearest', .clamp, .nearest),
-                  buildShaderSurface('Repeat Nearest', .clamp, .nearest),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Row(
-                spacing: 8,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  buildShaderSurface('Clamp Linear', .clamp, .linear),
-                  buildShaderSurface('Repeat Linear', .repeat, .linear),
-                ],
-              ),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -318,117 +233,250 @@ class _WrapExampleState extends State<WrapExample> {
         final shaderPath = 'shaders/wrap/Tissue.frag';
         final texture = 'assets/textures/Abstract1.jpg';
         Widget buildShaderSurface(String title, WrapMode wrap) {
-          return Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                ),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SizedBox(
-                        width: constraints.maxWidth,
-                        height: constraints.maxHeight,
-                        child: ShaderSurface.auto(
-                          key: UniqueKey(),
-                          shaderPath.feed(
-                            texture,
-                            wrap: wrap,
-                          ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      child: ShaderSurface.auto(
+                        key: ValueKey('$title-$wrap'),
+                        shaderPath.feed(
+                          texture,
+                          wrap: wrap,
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
+              ),
+            ],
           );
         }
 
-        return Column(
-          children: [
-            Expanded(
-              child: Row(
-                spacing: 8,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  buildShaderSurface('Clamp', .clamp),
-                  buildShaderSurface('Repeat', .repeat),
-                ],
-              ),
-            ),
-          ],
+        final widgets = [
+          buildShaderSurface('Clamp', .clamp),
+          buildShaderSurface('Repeat', .repeat),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < narrowWidthThreshold;
+            if (isNarrow) {
+              return SizedBox(
+                height: constraints.maxHeight,
+                child: SingleChildScrollView(
+                  child: Column(
+                    spacing: 8,
+                    children: [
+                      for (var w in widgets) SizedBox(height: constraints.maxWidth, child: w),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return Row(
+              spacing: 8,
+              children: [
+                for (var w in widgets) Expanded(child: w),
+              ],
+            );
+          },
         );
       },
     );
   }
 
-  LayoutBuilder buildRawImageWrap() {
-    const String shader = 'shaders/wrap/Wrap Debug.frag';
-    const String texture = 'assets/textures/Rock Tiles.jpg';
-
-    Widget assetImage = Image.asset(
-      texture,
-      fit: BoxFit.cover,
-    );
-    // final clamp = shader.feed(texture, wrap: .clamp);
-    // final repeat = shader.feed(texture, wrap: .repeat);
-    // final mirror = shader.feed(texture, wrap: .mirror);
-
-    final clamp = shader.feed(
-      assetImage,
-      wrap: .clamp,
-    );
-    final repeat = shader.feed(
-      assetImage,
-      wrap: .repeat,
-    );
-    final mirror = shader.feed(
-      assetImage,
-      wrap: .mirror,
-    );
-    Widget panel(String title, ShaderBuffer buffer) {
-      return Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Text(
-                title,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-            ),
-            Expanded(
-              child: ShaderSurface.auto(buffer, upSideDown: true),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 700;
-        if (isNarrow) {
+  Builder buildBlackHoleODEGeodesicSolver() {
+    return Builder(
+      builder: (context) {
+        final main = 'shaders/wrap/Black Hole ODE Geodesic Solver.frag';
+        final texture = 'assets/textures/Stars.jpg';
+        Widget shaderSurface(String title, WrapMode wrap, FilterMode filter) {
           return Column(
-            spacing: 8,
+            mainAxisAlignment: .center,
             children: [
-              panel('Clamp (default)', clamp),
-              panel('Repeat', repeat),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+              Expanded(
+                child: ShaderSurface.auto(
+                  main.feed(
+                    texture,
+                    wrap: wrap,
+                    filter: filter,
+                  ),
+                ),
+              ),
             ],
           );
         }
-        return Row(
-          spacing: 8,
-          children: [
-            panel('Clamp (default)', clamp),
-            panel('Repeat', repeat),
-            panel('Mirror', mirror),
-          ],
+
+        final widgets = [
+          shaderSurface('Clamp', .clamp, .nearest),
+          shaderSurface('Repeat', .repeat, .nearest),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < narrowWidthThreshold;
+            if (isNarrow) {
+              return SizedBox(
+                height: constraints.maxHeight,
+                child: SingleChildScrollView(
+                  child: Column(
+                    spacing: 8,
+                    children: [
+                      for (var w in widgets) SizedBox(height: constraints.maxWidth / 2, child: w),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return Row(
+              spacing: 8,
+              children: [
+                for (var w in widgets)
+                  Expanded(
+                    child: SizedBox(
+                      height: constraints.maxHeight / 2,
+                      child: w,
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Builder buildBrokenTime() {
+    return Builder(
+      builder: (context) {
+        final main = 'shaders/wrap/Broken Time Gate.frag';
+        final texture = 'assets/textures/Grey Noise Medium.png';
+        Widget buildShaderSurface(String title, WrapMode wrap, FilterMode filter) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      child: ShaderSurface.auto(
+                        main.feed(
+                          texture,
+                          wrap: wrap,
+                          filter: filter,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        }
+
+        final widgets = [
+          buildShaderSurface('Clamp Nearest', .clamp, .nearest),
+          buildShaderSurface('Repeat Nearest', .repeat, .nearest),
+          buildShaderSurface('Clamp Linear', .clamp, .linear),
+          buildShaderSurface('Repeat Linear', .repeat, .linear),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < narrowWidthThreshold;
+            int crossAxisCount = isNarrow ? 1 : 2;
+            return GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 16 / 9,
+              ),
+              itemCount: widgets.length,
+              itemBuilder: (context, index) => widgets[index],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Builder buildGoodbyeDreamClouds() {
+    return Builder(
+      builder: (_) {
+        final shaderPath = 'shaders/wrap/Goodbye Dream Clouds.frag';
+        final texture = 'assets/textures/RGBA Noise Medium.png';
+        Widget buildShaderSurface(String title, WrapMode wrap, FilterMode filter) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      child: ShaderSurface.auto(
+                        key: UniqueKey(),
+                        shaderPath.feed(
+                          texture,
+                          wrap: wrap,
+                          filter: filter,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        }
+
+        final widgets = [
+          buildShaderSurface('Clamp Nearest', .clamp, .nearest),
+          buildShaderSurface('Repeat Nearest', .repeat, .nearest),
+          buildShaderSurface('Clamp Linear', .clamp, .linear),
+          buildShaderSurface('Repeat Linear', .repeat, .linear),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < narrowWidthThreshold;
+            int crossAxisCount = isNarrow ? 1 : 2;
+            return GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 16 / 9,
+              ),
+              itemCount: widgets.length,
+              itemBuilder: (context, index) => widgets[index],
+            );
+          },
         );
       },
     );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shader_graph/shader_graph.dart';
 
 /// 这个例子其实是在观察 GPU 内存中的数据
+///
 /// This example visualizes float data stored in GPU memory.
 class FloatExample extends StatefulWidget {
   const FloatExample({super.key});
@@ -34,12 +35,16 @@ class _FloatExampleState extends State<FloatExample> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         // Ensure the shader is rendered so byteData becomes available.
-        SizedBox(
-          height: 120,
-          child: ShaderSurface.builder(
-            () => [staticVec4GridA!],
-            key: const ValueKey('static-vec4-grid-a'),
-          ),
+        Builder(
+          builder: (context) {
+            return SizedBox(
+              height: 120,
+              child: ShaderSurface.builder(
+                () => [staticVec4GridA!],
+                key: const ValueKey('static-vec4-grid-a'),
+              ),
+            );
+          },
         ),
         ListenableBuilder(
           listenable: staticVec4GridA!,
@@ -49,7 +54,9 @@ class _FloatExampleState extends State<FloatExample> {
               return const Center(child: Text('Waiting GPU readback...'));
             }
 
-            final bytes = bd.buffer.asUint8List();
+            // ByteData can be a view into a larger buffer (non-zero offset).
+            // Respect the view range to avoid reading garbage on some platforms.
+            final bytes = bd.buffer.asUint8List(bd.offsetInBytes, bd.lengthInBytes);
 
             final painter = _Vec4GridPainter(
               data: bytes,

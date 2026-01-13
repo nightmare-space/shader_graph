@@ -5,6 +5,7 @@
 #version 460 core
 #include <flutter/runtime_effect.glsl>
 precision highp float;
+precision highp int;
 
 
 // 按需在 shader 源码里添加：`uniform sampler2D iChannel[0-N];`
@@ -74,10 +75,32 @@ vec2 sg_texelCenterUv(ivec2 ipos, vec2 sizePx) {
 }
 #define SG_HAS_TEXEL_CENTER_UV 1
 
+// Compile-time switch for native texelFetch.
+//
+// NOTE:
+// - This must be decided at compile time (a uniform cannot guard unsupported syntax).
+// - Only enable this when you know the current backend/compiler supports `texelFetch`.
+//
+// 用于切换“真实 texelFetch”与兼容实现的编译期开关。
+// 注意：必须是编译期开关（uniform 无法保护不支持的语法）。
+// 只在你确认当前后端/编译器支持 `texelFetch` 时才打开。
+#ifndef SG_USE_NATIVE_TEXELFETCH
+#define SG_USE_NATIVE_TEXELFETCH 0
+#endif
+
 // 注意：这里不支持 LOD（Flutter runtime shader 通常不暴露 mip 控制）。
 //
 // NOTE: LOD is not supported here (Flutter runtime shaders generally don't expose mip control).
-#define SG_TEXELFETCH(tex, ipos, sizePx) texture((tex), sg_texelCenterUv((ipos), (sizePx)))
+#if SG_USE_NATIVE_TEXELFETCH
+// Real texelFetch path (Impeller may support this).
+// NOTE: LOD is forced to 0.
+#define SG_TEXELFETCH(tex, ipos, sizePx) texelFetch((tex), (ipos), 0)
+#else
+// Fallback path: sample texel center via texture() + snapped UV.
+//
+// #define SG_TEXELFETCH(tex, ipos, sizePx) texture((tex), sg_texelCenterUv((ipos), (sizePx)))
+#define SG_TEXELFETCH(tex, ipos, sizePx) texture((tex), (vec2(ipos) + 0.5) / (sizePx))
+#endif
 #define SG_HAS_TEXELFETCH 1
 
 // Convenience: channel sizes and texel fetch without manually passing size.

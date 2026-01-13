@@ -1,21 +1,23 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'examples/game.dart';
-import 'examples/games/bricks_game.dart';
 import 'examples/animation_controll.dart';
 import 'examples/float.dart';
-import 'examples/iframe.dart';
 import 'examples/keyboard_input.dart';
 import 'examples/mouse_input.dart';
 import 'examples/multi_pass.dart';
-import 'examples/games/pacman_game.dart';
 import 'examples/text_render.dart';
 import 'examples/widget_input.dart';
 import 'examples/wrap.dart';
 
+double narrowWidthThreshold = 600;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(MaterialApp(home: Scaffold(body: MyApp())));
+  ui.ImageFilter.isShaderFilterSupported;
 }
 
 class MyApp extends StatelessWidget {
@@ -82,29 +84,18 @@ class _RootPageState extends State<RootPage> {
           ),
         ),
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          double width = constraints.maxWidth;
-          double height = constraints.maxHeight;
-          if (width < 400 && currentIndex != 0 && currentIndex != 1) {
-            height = width * 0.75;
-          }
-          return SizedBox(
-            width: width,
-            height: height,
-            child: [
-              GameExample(),
-              WidgetInputExample(),
-              KeyboardExample(),
-              MouseExample(),
-              WrapExample(),
-              TextRenderExample(),
-              AnimationControlExample(),
-              MultiPassExample(),
-              FloatExample(),
-            ][currentIndex],
-          );
-        },
+      child: SafeArea(
+        child: [
+          GameExample(),
+          WidgetInputExample(),
+          KeyboardExample(),
+          MouseExample(),
+          WrapExample(),
+          TextRenderExample(),
+          AnimationControlExample(),
+          MultiPassExample(),
+          FloatExample(),
+        ][currentIndex],
       ),
     );
   }

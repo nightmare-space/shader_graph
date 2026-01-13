@@ -7,12 +7,15 @@
 // Game rendering. Regular 2D distance field rendering.
 //
 
-#include <../common/common_header.frag>
+// Uncomment for Impeller debugging (requires backend support for texelFetch).
+// #define SG_USE_NATIVE_TEXELFETCH 1
 
-uniform sampler2D iChannel0;
+#include <../common/common_header.frag>
 
 // Use standard scheme (4 physical pixels per virtual texel)
 #include <../common/sg_feedback_rgba8.frag>
+
+uniform sampler2D iChannel0;
 
 const vec2 VSIZE = vec2(14.0, 14.0);
 

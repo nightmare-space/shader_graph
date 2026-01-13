@@ -8,7 +8,7 @@ class KeyboardExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShaderSurface.builder(
       () {
-        final mainBuffer = 'shaders/keyboard/keyboard Test.frag'.shaderBuffer;
+        final mainBuffer = 'shaders/keyboard/Keyboard Test.frag'.shaderBuffer;
         mainBuffer.feedKeyboard();
         mainBuffer.feedImageFromAsset('assets/codepage12.png');
 

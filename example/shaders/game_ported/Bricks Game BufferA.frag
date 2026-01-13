@@ -6,6 +6,9 @@
 // - iChannel0: previous frame state (feedback)
 // - iChannel1: Shadertoy-style keyboard texture
 
+// Uncomment for Impeller debugging (requires backend support for texelFetch).
+// #define SG_USE_NATIVE_TEXELFETCH 1
+
 #include <../common/common_header.frag>
 #include <../common/sg_feedback_rgba8.frag>
 

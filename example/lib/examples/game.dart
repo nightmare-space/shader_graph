@@ -18,36 +18,34 @@ class _GameExampleState extends State<GameExample> {
       'Bricks Game',
       'Pacman Game',
     ];
-    return SafeArea(
-      child: Column(
-        children: [
-          CupertinoNavigationBar(
-            middle: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: CupertinoSlidingSegmentedControl(
-                // isMomentary: true,
-                proportionalWidth: true,
-                groupValue: currentIndex,
-                onValueChanged: (int? value) {
-                  if (value != null) {
-                    currentIndex = value;
-                    setState(() {});
-                  }
-                },
-                children: {
-                  for (var i = 0; i < tabTitles.length; i++) i: Text(tabTitles[i]),
-                },
-              ),
+    return Column(
+      children: [
+        CupertinoNavigationBar(
+          middle: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: CupertinoSlidingSegmentedControl(
+              // isMomentary: true,
+              proportionalWidth: true,
+              groupValue: currentIndex,
+              onValueChanged: (int? value) {
+                if (value != null) {
+                  currentIndex = value;
+                  setState(() {});
+                }
+              },
+              children: {
+                for (var i = 0; i < tabTitles.length; i++) i: Text(tabTitles[i]),
+              },
             ),
           ),
-          Expanded(
-            child: [
-              BricksGame(),
-              PacmanGame(),
-            ][currentIndex],
-          ),
-        ],
-      ),
+        ),
+        Expanded(
+          child: [
+            BricksGame(),
+            PacmanGame(),
+          ][currentIndex],
+        ),
+      ],
     );
   }
 }

@@ -8,10 +8,10 @@
 
 #include <../common/common_header.frag>
 
+#include <../common/sg_feedback_rgba8.frag>
 uniform sampler2D iChannel0;
 uniform sampler2D iChannel1;
 
-#include <../common/sg_feedback_rgba8.frag>
 
 // storage register/texel addresses (same as Shadertoy)
 const ivec2 txPacmanPos       = ivec2(31, 1);

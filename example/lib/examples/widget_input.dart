@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:example/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
@@ -21,50 +22,66 @@ class _WidgetInputExampleState extends State<WidgetInputExample> {
       'assets/textures/Rock Tiles.jpg',
       fit: BoxFit.cover,
     );
-    return SafeArea(
-      child: Row(
-        spacing: 4,
-        children: [
-          Expanded(
-            child: Column(
-              spacing: 4,
-              children: [
-                Text('feedWidgetInput', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                Expanded(
-                  child: ShaderSurface.auto(
-                    'shaders/wrap/Inverse Bilinear.frag'.feed(imageWidget),
-                  ),
-                ),
-              ],
+    final widgets = [
+      Expanded(
+        child: Column(
+          spacing: 4,
+          children: [
+            Text('feedWidgetInput', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            Expanded(
+              child: ShaderSurface.auto(
+                'shaders/wrap/Inverse Bilinear.frag'.feed(imageWidget),
+              ),
             ),
-          ),
-          Expanded(
-            child: Column(
-              spacing: 4,
-              children: [
-                Text(
-                  'ImageFilter.shader(Only Impeller)',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Container(
-                        color: Colors.red,
-                      ),
-                      WidgetInputTest(
-                        child: SizedBox.expand(
-                          child: imageWidget,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
+      Expanded(
+        child: Column(
+          spacing: 4,
+          children: [
+            Text(
+              'ImageFilter.shader(Impeller)',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            Expanded(
+              child: Stack(
+                children: [
+                  Container(
+                    color: Colors.red,
+                  ),
+                  WidgetInputTest(
+                    child: SizedBox.expand(
+                      child: imageWidget,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < narrowWidthThreshold) {
+          return Column(
+            children: [
+              widgets[0],
+              const SizedBox(height: 16),
+              widgets[1],
+            ],
+          );
+        } else {
+          return Row(
+            children: [
+              widgets[0],
+              const SizedBox(width: 16),
+              widgets[1],
+            ],
+          );
+        }
+      },
     );
   }
 }
