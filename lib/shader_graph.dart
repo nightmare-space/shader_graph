@@ -6,8 +6,9 @@ export 'src/controller/shader_controller.dart';
 export 'src/foundation/filter_mode.dart';
 export 'src/foundation/wrap_mode.dart';
 
-// import '' is same as import 'shader_graph.dart'
+// import '' is same as import 'shader_graph.dart
 import '';
+import 'package:flutter/foundation.dart';
 import 'src/rendering/animated_sampler.dart';
 import 'src/foundation/shader_input.dart';
 import 'package:flutter/rendering.dart';

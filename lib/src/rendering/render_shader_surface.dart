@@ -226,9 +226,11 @@ class ShaderSurfaceLayer extends OffsetLayer {
         _rendering = false;
         onFramePresented?.call(iFrame.toInt());
       } else {
-        graph._renderFrame(data: data).catchError((_) {
-          // Swallow render errors here so we can keep the scheduler alive.
-          // The last frame (if any) will remain on screen.
+        graph._renderFrame(data: data).catchError((e, st) {
+          // Keep the scheduler alive, but do log the error so callers can
+          // diagnose blank frames on specific backends.
+          debugPrint('ShaderGraph render error: $e');
+          debugPrint('$st');
           return null;
         }).whenComplete(() {
           _rendering = false;
