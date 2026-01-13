@@ -9,10 +9,12 @@ class ShaderBuffer extends ChangeNotifier {
   });
 
   /// 着色器资源路径，不知道 Flutter 什么时候可以支持用 File 对象加载着色器
+  ///
   /// Shader asset path. Not sure when Flutter will support loading shaders from File objects.
   final String shaderAssetPath;
 
   /// 缩放比例，可以以更低的分辨率渲染以提升性能
+  ///
   /// Scale factor, can render at lower resolution for better performance
   double scale;
   final String? name;
@@ -119,6 +121,13 @@ class ShaderBuffer extends ChangeNotifier {
   /// Initialize the shader. If using ShaderBufferWrapper, manual invocation is not required.
   Future<void> init() async {
     try {
+      if (kIsWeb) {
+        // See https://github.com/flutter/flutter/issues/180862
+        // Currently web needs the URI-encoded full path.
+        ui.FragmentProgram program = await ui.FragmentProgram.fromAsset(Uri.encodeFull(shaderAssetPath));
+        _shader = program.fragmentShader();
+        return;
+      }
       ui.FragmentProgram program = await ui.FragmentProgram.fromAsset(shaderAssetPath);
       _shader = program.fragmentShader();
     } catch (e) {
@@ -172,8 +181,19 @@ class ShaderBuffer extends ChangeNotifier {
   /// and uncomment the corresponding code in Render(_Sync),
   /// then run the Brick Game.
   void _beginFrame() {
-    _prevOutput?.dispose();
-    _prevOutput = _output;
+    // 避免 dispose 同一个 image 两次
+    // 当 widget 在 beginFrame() 和下一次 render 之间被 dispose 时，
+    // `_prevOutput` 可能暂时与 `_output` 别名化。
+    //
+    // Avoid disposing the same image twice.
+    // When the widget is disposed between beginFrame() and the next render,
+    // `_prevOutput` may temporarily alias `_output`.
+    final prev = _prevOutput;
+    final out = _output;
+    if (prev != null && !identical(prev, out)) {
+      prev.dispose();
+    }
+    _prevOutput = out;
   }
 
   Future<void> _render({required RenderData data}) async {
@@ -197,11 +217,6 @@ class ShaderBuffer extends ChangeNotifier {
     final picture = recorder.endRecording();
     final img = await picture.toImage(realSize.width.ceil(), realSize.height.ceil());
 
-    // `toByteData()` is an expensive GPU->CPU readback. Only do it when
-    // somebody is actually listening (e.g. debug UI like Data Grid).
-    if (hasListeners) {
-      frameData = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
-    }
     picture.dispose();
 
     // prevOutput 的推进由 ShaderGraph 在“每帧开始”统一调用 beginFrame() 处理，
@@ -212,6 +227,21 @@ class ShaderBuffer extends ChangeNotifier {
 
     _output = img;
     if (hasListeners) notifyListeners();
+
+    // `toByteData()` is an expensive GPU->CPU readback. Only do it when
+    // somebody is actually listening.
+    if (hasListeners && !_readbackInFlight) {
+      _readbackInFlight = true;
+      img.toByteData(format: ui.ImageByteFormat.rawRgba).then((bd) {
+        if (_isDisposed) return;
+        _readbackInFlight = false;
+        if (bd == null) return;
+        frameData = bd;
+        notifyListeners();
+      }).catchError((_) {
+        _readbackInFlight = false;
+      });
+    }
   }
 
   void renderSync({
@@ -235,16 +265,17 @@ class ShaderBuffer extends ChangeNotifier {
     final img = picture.toImageSync(realSize.width.ceil(), realSize.height.ceil());
 
     picture.dispose();
-    // 这里不能把 _output dispose 掉，下一帧还需呀把这个作为 prevOutput 使用
-    // prevOutput 的推进由 beginFrame() 统一处理（每帧一次）。
-    // 这里保留旧代码（注释）便于对照：
+
+    // prevOutput 的推进由 ShaderGraph 在“每帧开始”统一调用 beginFrame() 处理，
+    // 从而保证 usePreviousFrame 语义稳定（=上一帧）且与 buffer 执行顺序无关。
+    // 这里保留旧逻辑（注释）便于对照/回滚：
     // _prevOutput?.dispose();
     // _prevOutput = _output;
     _output = img;
+    if (hasListeners) notifyListeners();
 
-    // Keep sync rendering for display, but still allow debug UIs to read back
-    // RGBA bytes. `toByteData()` is async, so we trigger it out-of-band.
-    // For the Static Vec4 Grid debug UI, a single readback is sufficient.
+    // `toByteData()` is an expensive GPU->CPU readback. Only do it when
+    // somebody is actually listening.
     if (hasListeners && frameData == null && !_readbackInFlight) {
       _readbackInFlight = true;
       img.toByteData(format: ui.ImageByteFormat.rawRgba).then((bd) {
@@ -397,11 +428,16 @@ class ShaderBuffer extends ChangeNotifier {
   @override
   void dispose() {
     log('Disposing ShaderBuffer: $shaderAssetPath');
-    _output?.dispose();
-    _prevOutput?.dispose();
+    // Dispose images by identity to avoid double-dispose assertions.
+    final images = Set<ui.Image>.identity();
+    if (_output != null) images.add(_output!);
+    if (_prevOutput != null) images.add(_prevOutput!);
+    if (_blankImage != null) images.add(_blankImage!);
+    for (final img in images) {
+      img.dispose();
+    }
     _output = null;
     _prevOutput = null;
-    _blankImage?.dispose();
     _blankImage = null;
     _isDisposed = true;
     super.dispose();
