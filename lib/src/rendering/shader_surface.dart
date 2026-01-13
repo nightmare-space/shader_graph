@@ -1,158 +1,101 @@
 part of 'package:shader_graph/shader_graph.dart';
 
-/// 最终根据 ShaderGraph 渲染的 Widget。
-/// ShaderSurface 负责管理时间、帧数、鼠标和键盘输入。
+/// A widget that renders a [ShaderGraph] to the screen.
 ///
-/// The ShaderSurface widget that renders a ShaderGraph.
-/// Usually created via ShaderSurfaceWrapper.
-/// ShaderSurface manages time, frame count, mouse and keyboard input.
+/// [ShaderSurface] is the UI-facing runtime for the render graph. It is
+/// responsible for:
+///
+/// - Initializing the underlying [ShaderGraph] from [buffers].
+/// - Driving time (`iTime`) and frame index (`iFrame`) for shaders.
+/// - Forwarding pointer input to shaders via `iMouse`.
+/// - Optionally providing keyboard state via [KeyboardController] (as an
+///   iChannel sampler for [KeyboardInput]).
+///
+/// The surface is commonly created via:
+/// - [ShaderSurface.auto] for a shader asset path, a single [ShaderBuffer], or a
+///   list of buffers (multi-pass).
+/// - [ShaderSurface.builder] to lazily build buffers.
+///
+/// Coordinate system:
+/// - Flutter uses a Y-down coordinate system. When [upSideDown] is `true`, the
+///   widget flips vertically so shaders authored for Y-up (e.g. Shadertoy/OpenGL)
+///   render as expected.
+///
+/// Loading:
+/// - While the graph is initializing, [onLoading] is shown (or a default progress
+///   indicator if omitted).
 class ShaderSurface extends StatefulWidget {
   const ShaderSurface({
     required this.buffers,
     this.keyboardController,
     this.shaderController,
-    // TODO: Support setting every input's upSideDown individually, use flipY.
     this.upSideDown = true,
+    this.onLoading,
     super.key,
   });
 
-  /// Creates a [ShaderSurface] from a list of pre-built [ShaderBuffer]s.
+  /// A convenience factory that creates a [ShaderSurface] from a flexible parameter.
   ///
-  /// This is the most flexible way to create a shader surface, suitable for
-  /// complex multi-pass rendering pipelines where you need explicit control
-  /// over buffer dependencies and execution order.
+  /// This factory lets you construct a surface without dealing with [ShaderGraph]
+  /// directly. It accepts one of the following:
   ///
-  /// The framework automatically performs topological sorting on the buffers
-  /// to ensure they execute in the correct order based on their dependencies.
-  /// The last buffer in the list will be used as the final output.
+  /// - A `String` shader asset path (`.frag`), which will be turned into a single
+  ///   [ShaderBuffer] via the `shaderBuffer` extension.
+  /// - A single [ShaderBuffer].
+  /// - A `List<ShaderBuffer>` for multi-pass graphs.
   ///
-  /// ## Parameters
+  /// Notes:
+  /// - Buffer execution order is determined by [ShaderGraph] via dependency-based
+  ///   scheduling (topological sorting). The final output is the last buffer in
+  ///   the provided list.
+  /// - [upSideDown] defaults to `true` to compensate for Flutter's Y-down
+  ///   coordinate system (common Shadertoy/OpenGL shaders assume Y-up).
+  /// - If a [keyboardController] is provided, shaders can sample keyboard state
+  ///   through keyboard inputs (iChannel samplers).
   ///
-  /// * `buffers` - The list of shader buffers to render. The last buffer will be
-  ///   used as the final output. Buffers are automatically topologically sorted
-  ///   based on their dependencies.
-  /// * `upSideDown` - Whether to flip the Y-axis. Defaults to `true` because
-  ///   Flutter's coordinate system (Y-down) differs from OpenGL/Shadertoy (Y-up).
-  /// * `keyboardController` - An optional [KeyboardController] for handling
-  ///   keyboard input in shaders. If provided, shaders can sample keyboard state
-  ///   through `iChannel` uniforms.
-  /// * `key` - The widget's [Key], used to control how one widget replaces
-  ///   another widget in the tree.
-  /// {@tool snippet}
-  ///
-  /// **Simple multi-pass example:**
-  ///
-  /// ```dart
-  /// // Create three dependent shader buffers
-  /// final bufferA = 'shaders/BufferA.frag'.shaderBuffer.feedback();
-  /// final bufferB = 'shaders/BufferB.frag'.shaderBuffer.feed(bufferA);
-  /// final mainBuffer = 'shaders/Main.frag'.shaderBuffer
-  ///   .feed(bufferA)
-  ///   .feed(bufferB);
-  ///
-  /// // Create the surface with explicit buffer order
-  /// return ShaderSurface.buffers(
-  ///   [bufferA, bufferB, mainBuffer],
-  ///   upSideDown: true,
-  /// );
-  /// ```
-  /// {@end-tool}
-  ///
-  /// {@tool snippet}
-  /// **Game example with keyboard input:**
-  ///
-  /// ```dart
-  /// class GameScreen extends StatelessWidget {
-  ///   const GameScreen({super.key});
-  ///
-  ///   @override
-  ///   Widget build(BuildContext context) {
-  ///     final bufferA = 'shaders/game/BufferA.frag'
-  ///         .shaderBuffer
-  ///         .feedback()
-  ///         .feedKeyboard();
-  ///     bufferA.fixedOutputSize = const Size(128, 128);
-  ///
-  ///     final mainBuffer = 'shaders/game/Main.frag'
-  ///         .shaderBuffer
-  ///         .feed(bufferA);
-  ///
-  ///     return Scaffold(
-  ///       body: ShaderSurface.buffers(
-  ///         [bufferA, mainBuffer],
-  ///         keyboardController: KeyboardController(),
-  ///       ),
-  ///     );
-  ///   }
-  /// }
-  /// ```
-  /// {@end-tool}
-  ///
-  /// {@template shader_graph.buffers_comparison}
-  /// Compared to other factory constructors:
-  /// - [ShaderSurface.auto]: Automatically infers the type from the parameter
-  /// - [ShaderSurface.builder]: Builds buffers lazily through a callback
-  /// - [ShaderSurface.buffers]: Takes pre-built buffers directly
-  /// {@endtemplate}
-  factory ShaderSurface.buffers(
-    List<ShaderBuffer> buffers, {
-    bool upSideDown = true,
-    Key? key,
-    KeyboardController? keyboardController,
-  }) {
-    return ShaderSurface(
-      buffers: buffers,
-      upSideDown: upSideDown,
-      keyboardController: keyboardController,
-      key: key,
-    );
-  }
-
-  /// 支持传入 frag 的资源路径，ShaderBuffer 对象，或者 ShaderBuffer 列表
-  /// 不用关心 ShaderGraph 的细节
-  ///
-  /// Support passing in a frag asset path, ShaderBuffer object, or a list of ShaderBuffer
-  /// without caring about the details of ShaderGraph
-  /// {@macro shader_graph.buffers_comparison}
+  /// If [param] is not one of the supported types, an [ArgumentError] is thrown.
   factory ShaderSurface.auto(
     dynamic param, {
     Key? key,
+    bool upSideDown = true,
     KeyboardController? keyboardController,
     ShaderController? shaderController,
-    bool upSideDown = true,
+    Widget Function(BuildContext context)? onLoading,
   }) {
+    final List<ShaderBuffer> buffers;
     switch (param) {
       case ShaderBuffer buffer:
-        return ShaderSurface(
-          buffers: [buffer],
-          key: key,
-          upSideDown: upSideDown,
-          keyboardController: keyboardController,
-          shaderController: shaderController,
-        );
-      case List<ShaderBuffer> buffers:
-        return ShaderSurface(
-          buffers: buffers,
-          key: key,
-          upSideDown: upSideDown,
-          keyboardController: keyboardController,
-          shaderController: shaderController,
-        );
-      // ignore: pattern_never_matches_value_type
+        buffers = [buffer];
+      case List<ShaderBuffer> buffersList:
+        buffers = buffersList;
       case String assetPath:
-        return ShaderSurface(
-          buffers: [assetPath.shaderBuffer],
-          key: key,
-          upSideDown: upSideDown,
-          keyboardController: keyboardController,
-          shaderController: shaderController,
-        );
+        buffers = [assetPath.shaderBuffer];
       default:
         throw ArgumentError('buffer must be String or ShaderBuffer or List<ShaderBuffer>, got ${param.runtimeType}');
     }
+    return ShaderSurface(
+      key: key,
+      buffers: buffers,
+      upSideDown: upSideDown,
+      keyboardController: keyboardController,
+      shaderController: shaderController,
+      onLoading: onLoading,
+    );
   }
 
-  /// {@macro shader_graph.buffers_comparison}
+  /// Creates a [ShaderSurface] from a lazily-built list of buffers.
+  ///
+  /// This is useful when buffer construction depends on runtime values (e.g.
+  /// screen size, feature flags, or conditional inputs) and you want to defer
+  /// building until the widget is created.
+  ///
+  /// Notes:
+  /// - The returned buffers are used to construct the internal [ShaderGraph].
+  /// - Buffer execution order is determined by [ShaderGraph] via dependency-based
+  ///   scheduling (topological sorting); the final output is the last buffer in
+  ///   the provided list.
+  /// - [upSideDown] defaults to `true` to compensate for Flutter's Y-down
+  ///   coordinate system (common Shadertoy/OpenGL shaders assume Y-up).
   factory ShaderSurface.builder(
     List<ShaderBuffer> Function() builder, {
     Key? key,
@@ -188,12 +131,16 @@ class ShaderSurface extends StatefulWidget {
   final ShaderController? shaderController;
 
   /// Flutter 的坐标系是左上角为原点，Y 轴向下递增，展示的着色器会上下颠倒
-  /// 所以默认翻转回来，但一些特殊的着色器是不需要翻转的
+  /// 所以默认翻转回来，但一些特殊的着色器是不需要翻转的]
+  ///
+  // TODO: Support setting every input's upSideDown individually, use flipY.
   /// TODO: 还需要针对整个 Widget 翻转吗，用 awesome_flutter_shaders 来测试一下
   /// Flutter's coordinate system has the origin at the top-left corner, with the Y-axis increasing downwards,
   /// which causes the displayed shader to be upside down.
   /// Therefore, it is flipped back by default, but some special shaders do not require flipping
   final bool upSideDown;
+
+  final Widget Function(BuildContext context)? onLoading;
 
   @override
   State<ShaderSurface> createState() => _ShaderSurfaceState();
@@ -303,8 +250,7 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
       future: _graphFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          // TODO: Support custom loading widget
-          return const Center(child: CircularProgressIndicator());
+          return widget.onLoading?.call(context) ?? const Center(child: CircularProgressIndicator());
         }
         return LayoutBuilder(builder: (context, constraints) {
           return SizedBox(
