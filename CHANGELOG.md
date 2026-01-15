@@ -1,3 +1,8 @@
+## 0.1.1(2026.01.13)
+
+- Improved example to support Android/iOS platforms.
+- Suppport custom loading widget when ShaderBuffer is loading.
+
 ## 0.1.0(2026.01.10)
 
 - Support ShaderController for play/pause control.

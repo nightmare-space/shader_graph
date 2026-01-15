@@ -253,8 +253,7 @@ final buffer = ShaderBuffer('$asset_path');
 `ShaderBuffer` 可以配合以下 API 使用
 
 - `ShaderSurface.auto`: 自动判断输入类型
-- `ShaderSurface.builder`: builer 最终调用 buffers，但 builder 提供函数回调，可以供开发者优化 Widget 代码结构
-- `ShaderSurface.buffers`: 适合复杂多 Pass 场景
+- `ShaderSurface.builder`: 适合复杂多 Pass 场景，builer 最终调用 buffers，但 builder 提供函数回调，可以供开发者优化 Widget 代码结构
 
 ```dart
 // path ends with .frag
@@ -266,7 +265,7 @@ ShaderSurface.builder(() {
   // ...
   return [bufferA, bufferB, mainBuffer];
 });
-ShaderSurface.buffers([bufferA, bufferB, mainBuffer]);
+ShaderSurface(buffers: [bufferA, bufferB, mainBuffer]);
 ```
 
 ## ShaderBuffer.feed

@@ -253,8 +253,7 @@ final buffer = ShaderBuffer('$asset_path');
 `ShaderBuffer` can be used with the following APIs:
 
 - `ShaderSurface.auto`: Automatically determines input types
-- `ShaderSurface.builder`: The builder ultimately calls buffers, but the builder provides a function callback that allows developers to optimize Widget code structure
-- `ShaderSurface.buffers`: Suitable for complex multi-pass scenarios
+- `ShaderSurface.builder`: Suitable for complex multi-pass scenarios, The builder ultimately calls buffers, but the builder provides a function callback that allows developers to optimize Widget code structure
 
 ```dart
 // path ends with .frag
@@ -266,7 +265,7 @@ ShaderSurface.builder(() {
   // ...
   return [bufferA, bufferB, mainBuffer];
 });
-ShaderSurface.buffers([bufferA, bufferB, mainBuffer]);
+ShaderSurface(buffers: [bufferA, bufferB, mainBuffer]);
 ```
 
 ## ShaderBuffer.feed
