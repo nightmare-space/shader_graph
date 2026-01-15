@@ -62,6 +62,7 @@ class ShaderBuffer extends ChangeNotifier {
   }
 
   /// 添加一个 ShaderBuffer 作为输入，对应 shader 里的 iChannelN
+  ///
   /// Adding a ShaderBuffer as input, corresponding to iChannelN in the shader
   ShaderBuffer feedShader(
     ShaderBuffer buffer, {
@@ -73,6 +74,7 @@ class ShaderBuffer extends ChangeNotifier {
   }
 
   /// 添加一个 ShaderBuffer 作为输入资源，从 assetPath 加载，对应 shader 里的 iChannelN
+  ///
   /// Adding a ShaderBuffer as input resource, loading from assetPath,
   /// corresponding to iChannelN in the shader
   ShaderBuffer feedShaderFromAsset(
@@ -85,6 +87,7 @@ class ShaderBuffer extends ChangeNotifier {
   }
 
   /// 添加一个图片资源作为输入，从 assetPath 加载，对应 shader 里的 iChannelN
+  ///
   /// Adding an image resource as input, loading from assetPath,
   /// corresponding to iChannelN in the shader
   ShaderBuffer feedImageFromAsset(
@@ -97,6 +100,7 @@ class ShaderBuffer extends ChangeNotifier {
   }
 
   /// 添加一个键盘输入作为输入，对应 shader 里的 iChannelN
+  ///
   /// Adding a keyboard input as input, corresponding to iChannelN in the shader
   ShaderBuffer feedKeyboard({WrapMode wrap = WrapMode.clamp, FilterMode filter = FilterMode.linear}) {
     _inputs.add(KeyboardInput(wrap: wrap, filter: filter));
@@ -104,6 +108,7 @@ class ShaderBuffer extends ChangeNotifier {
   }
 
   /// 添加反馈输入，对应 shader 里的 iChannelN
+  ///
   /// Adding a feedback input, corresponding to iChannelN in the shader
   ShaderBuffer feedback({WrapMode wrap = WrapMode.clamp, FilterMode filter = FilterMode.linear}) {
     _inputs.add(ShaderBufferInput(this, usePreviousFrame: true, wrap: wrap, filter: filter));
@@ -111,6 +116,7 @@ class ShaderBuffer extends ChangeNotifier {
   }
 
   /// 为了测试
+  ///
   /// For testing
   ShaderBuffer feedEmpty() {
     _inputs.add(EmptyInput());
@@ -118,17 +124,18 @@ class ShaderBuffer extends ChangeNotifier {
   }
 
   /// 初始化着色器，如果使用 ShaderBufferWrapper 可以不需要手动调用
+  ///
   /// Initialize the shader. If using ShaderBufferWrapper, manual invocation is not required.
   Future<void> init() async {
     try {
+      ui.FragmentProgram program;
+      String shaderAssetPath = this.shaderAssetPath;
       if (kIsWeb) {
         // See https://github.com/flutter/flutter/issues/180862
         // Currently web needs the URI-encoded full path.
-        ui.FragmentProgram program = await ui.FragmentProgram.fromAsset(Uri.encodeFull(shaderAssetPath));
-        _shader = program.fragmentShader();
-        return;
+        shaderAssetPath = Uri.encodeFull(shaderAssetPath);
       }
-      ui.FragmentProgram program = await ui.FragmentProgram.fromAsset(shaderAssetPath);
+      program = await ui.FragmentProgram.fromAsset(shaderAssetPath);
       _shader = program.fragmentShader();
     } catch (e) {
       log('Error loading shader program from $shaderAssetPath: $e');
