@@ -14,18 +14,26 @@
 
 当你需要更复杂的链路（多 Pass / 多输入 / feedback / ping-pong）时，再使用 `ShaderBuffer` 显式声明输入与依赖关系。
 
+源码中则包含了大量中英文注释，方便阅读与理解。
+
 [English](README.md) | 中文
 
 ---
 
 ## 示例
 
-我已经使用该库创建了  
-[awesome_flutter_shaders](https://github.com/mengyanshou/awesome_flutter_shaders) 项目。
+我已经使用该库创建了 [awesome_flutter_shaders](https://github.com/nightmare-space/awesome_flutter_shaders) 项目。
 
 这是目前最完整的示例集合，包含 **100+ 个 Shadertoy 着色器的 Flutter 移植示例**，非常推荐直接参考。
 
-在当前项目的 `example` 中，也包含了针对各个功能点的示例；`shader_graph` 的源码中则包含了大量中英文注释，方便阅读与理解。
+包括上面截图展示的是当前项目的 [example](example/lib/main.dart)，也包含了针对各个功能点的示例
+
+更不错的是，shader_graph 的 example 和大部分的 awesome_flutter_shaders 中的着色器都支持 flutter web。
+
+可以访问在线示例，感受着色器的魅力，以及使用这个库，能获得什么样的效果
+
+- [shader_graph example web](https://nightmare-space.github.io/shader_graph/)
+- [awesome_flutter_shaders web](https://nightmare-space.github.io/awesome_flutter_shaders/)
 
 ---
 
@@ -722,349 +730,15 @@ Dart 侧的整体设计，几乎完全按照我的想法来推进。
 
 ---
 
-## ShaderToy → Flutter（shader_graph）迁移与 Feedback/Wrap 指南
+## ShaderToy → Flutter 移植指南
 
-> 重要背景：Flutter RuntimeEffect/SkSL **不暴露真实 sampler 状态**（wrap/filter 不能像 Shadertoy 那样直接设置），且对某些 GLSL 特性有限制（例如 `texelFetch`、位运算、全局数组初始化等）。本项目用“头文件 + 宏 + Dart 侧喂 uniforms/samplers”的方式把常见 Shadertoy 代码迁移到可运行的形态。
+关于将 Shadertoy 着色器移植到 Flutter 的详细信息，包括反馈机制、环绕模式和 RGBA8 反馈规范，请参阅 [DEVELOP.zh.md](DEVELOP.zh.md)。
 
----
+本指南涵盖：
 
-### 0. 关键文件与术语
-
-- 统一头文件（强制 include）：
-  - `example/shaders/common/common_header.frag`
-- Shadertoy 主入口包装：
-  - `example/shaders/common/main_shadertoy.frag`
-- RGBA8 feedback 编码工具（可选 include，依赖 common_header）：
-  - `example/shaders/common/sg_feedback_rgba8.frag`
-- Dart 侧输入与 wrap：
-  - `lib/src/shader_input.dart`
-  - `lib/src/shader_buffer.dart`
-
-术语：
-
-- **pass/buffer**：Shadertoy 的 BufferA/BufferB/Main 等一张张中间渲染目标
-- **feedback**：读上一帧的输出（常用于“状态机/游戏逻辑/积分/位置”等）
-- **virtual texel**：逻辑上的状态网格（例如 14×14）
-- **physical pixel**：实际输出的像素。`sg_feedback_rgba8` 为了模拟 vec4 texel，把 1 个 virtual texel 展开成横向 4 个 physical 像素。
-
----
-
-### 1. Wrap（repeat/mirror/clamp）的正确用法
-
-#### 1.1 Dart 侧：给每个输入通道设置 wrap
-
-本项目用 `WrapMode` 表示 wrap（会被编码为 float 写入 `iChannelWrap`）：
-
-- `WrapMode.clamp`
-- `WrapMode.repeat`
-- `WrapMode.mirror`
-
-典型用法（示意）：
-
-```dart
-final buf = 'shaders/xxx.frag'.shaderBuffer
-  ..feed('assets/tex.png', wrap: WrapMode.repeat)
-  ..feed('assets/tex2.png', wrap: WrapMode.mirror);
-```
-
-对应关系：
-
-- `iChannelWrap.x` → iChannel0
-- `iChannelWrap.y` → iChannel1
-- `iChannelWrap.z` → iChannel2
-- `iChannelWrap.w` → iChannel3
-
-> 注意：这不是 GPU 真实 sampler state，而是 shader 内做 `uv` 变换实现 wrap。
-
-#### 1.2 Shader 侧：采样时必须走 wrap 宏
-
-在 `common_header.frag` 里已经提供：
-
-- `sg_wrapUv(uv, mode)`：把 uv 做 clamp/repeat/mirror
-- `SG_TEX0/1/2/3(tex, uv)`：按 iChannelWrap 对应分量采样
-
-因此你的 shader 里：
-
-- **不要**直接 `texture(iChannelN, uv)`（会忽略 wrap 配置）
-- **要**改成：
-
-```glsl
-vec4 c0 = SG_TEX0(iChannel0, uv);
-vec4 c1 = SG_TEX1(iChannel1, uv);
-```
-
-如果你希望更显式，也可以写：
-
-```glsl
-vec2 u = sg_wrapUv(uv, iChannelWrap.x);
-vec4 c0 = texture(iChannel0, u);
-```
-
-#### 1.3 关于 uv 坐标语义
-
-- Shadertoy 很多纹理采样默认使用 `[0,1]` 纹理坐标。
-- 也有一些 shader 用中心坐标（例如 `uv = (fragCoord - 0.5*iResolution)/iResolution.y`，范围大致 `[-1,1]`）。
-
-wrap 的数学定义是对输入 uv 做 clamp/repeat/mirror：
-
-- 如果你的 uv 不在 `[0,1]`，repeat/mirror 也能工作，但视觉效果可能与“标准贴图坐标”不同（这是预期差异，不是 bug）。
-
----
-
-### 2. `sg_feedback_rgba8`：RGBA8 feedback（上一帧）规范
-
-#### 2.1 为什么需要它
-
-Flutter 的中间渲染目标通常是 `ui.Image`（RGBA8）。直接把高精度 float 状态写进 RGBA8，会遇到：
-
-- 精度不足、量化抖动
-- 某些平台路径可能存在线性采样，导致相邻像素轻微混合
-- feedback 一旦写入 `NaN/Inf`，下一帧读回会持续污染（“永久扩散”）
-
-`sg_feedback_rgba8` 的目标：
-
-- 在 RGBA8 中 **稳定** 存/取状态
-- 尽量降低线性采样串扰对状态机的影响
-
-#### 2.2 include 顺序
-
-请按下面顺序 include（正常导包）：
-
-```glsl
-#include <../common/common_header.frag>
-#include <../common/sg_feedback_rgba8.frag>
-```
-
-说明：`sg_feedback_rgba8.frag` 依赖 `common_header.frag` 提供的 `SG_TEXELFETCH` 等宏。
-
-#### 2.3 虚拟 texel 与 physical 输出尺寸
-
-`sg_feedback_rgba8` 使用“横向 lane 展开”来模拟一个 virtual texel 存 vec4：
-
-- virtual `(x, y)` 对应 physical `(x*4 + lane, y)`，lane=0..3 对应 vec4 的 x/y/z/w
-
-因此：
-
-- virtual 尺寸 = `VSIZE = vec2(VW, VH)`
-- physical 输出尺寸 = `(VW*4, VH)`
-
-Dart 侧必须匹配：
-
-- 对数据 buffer 设置 `fixedOutputSize = Size(VW*4, VH)`
-
-否则读写坐标会错位。
-
-#### 2.4 读写 API（强制使用宏 + store 函数）
-
-##### 读：用 `SG_LOAD_*` 宏（必须显式传通道 token）
-
-推荐写法：
-
-```glsl
-const vec2 VSIZE = vec2(14.0, 14.0);
-
-vec4 s = SG_LOAD_VEC4(iChannel0, ivec2(0, 0), VSIZE);
-float a = SG_LOAD_FLOAT(iChannel0, ivec2(1, 0), VSIZE);
-vec3 v = SG_LOAD_VEC3(iChannel0, ivec2(2, 0), VSIZE);
-```
-
-要点：
-
-- 读取统一使用 `SG_LOAD_*` 宏，并且必须显式传入通道 token（`iChannelN`）。
-
-##### 写：用 `sg_storeVec4` / `sg_storeVec4Range`
-
-在 `mainImage(out vec4 fragColor, in vec2 fragCoord)` 末尾，把你想写入的数据按寄存器地址写回：
-
-```glsl
-ivec2 p = ivec2(fragCoord - 0.5);
-
-fragColor = vec4(0.0);
-sg_storeVec4(txSomeReg, valueSigned, fragColor, p);
-```
-
-其中：
-
-- `p` 是 physical 像素坐标（通常 `ivec2(fragCoord - 0.5)`）
-- `valueSigned` 是 **已编码到 [-1,1]** 的值（见下一节）
-
-#### 2.5 范围编码：把任意范围映射到 [-1,1]
-
-`sg_feedback_rgba8` 的存储假设是：
-
-- 单通道标量存储在 [-1, 1]
-
-所以你需要把现实范围（例如积分 0..50000）映射到 [-1,1]，并在读取后解码回来。
-
-常用函数（在 `sg_feedback_rgba8.frag` 内）：
-
-- `sg_encodeRangeToSigned(v, min, max)`
-- `sg_decodeSignedToRange(s, min, max)`
-- `sg_encode01ToSigned(v01)` / `sg_decodeSignedTo01(s)`
-
-#### 2.6 抗串扰建议（很关键）
-
-某些平台上 `sampler2D` 可能发生轻微线性采样，导致 lane（x*4+0..3）之间混合，进而把状态污染。
-
-建议：
-
-- 对“只有一个标量”的寄存器：写入时复制到 4 个 lane（`vec4(v,v,v,v)`）
-- 读取时对这类寄存器：做一次平均（`dot(raw, vec4(0.25))`）进一步降低抖动
-
-这在已迁移的例子里可以看到（例如 Bricks/Pacman 的某些寄存器）。
-
-#### 2.7 NaN/Inf 防护（feedback 会“永久污染”）
-
-一旦写入 `NaN/Inf`，之后每帧读回都会扩散。
-
-常见触发点：
-
-- 除以 0
-- `normalize(v)` / `inversesqrt(dot(v,v))` 里 v 非常接近 0
-- `log(0)`
-
-做法：
-
-- 对关键除数加下限（如 `max(abs(x), 1e-6)`）
-- 对 normalize 做长度判断
-
----
-
-### 3. `texelFetch` 的替代（Plan A：通道分辨率 uniforms）
-
-`common_header.frag` 提供：
-
-- `uniform vec2 iChannelResolution0..3;`
-- `SG_TEXELFETCH(tex, ipos, sizePx)`：texel-center UV + snap 的通用替代
-- `SG_TEXELFETCH0/1/2/3(ipos)`：对 `iChannel0..3` 的便捷宏（推荐）
-
-迁移时建议优先：
-
-```glsl
-vec4 v = SG_TEXELFETCH0(ivec2(x, y));
-```
-
-而不是手写 `textureSize` 常量。
-
----
-
-### 4. 用 Copilot Prompts 迁移 Shadertoy（推荐流程）
-
-本项目提供两个迁移 prompt：
-
-- `.github/prompts/port_shader.prompt.md`：通用迁移（不一定用 feedback）
-- `.github/prompts/port_shader_float.prompt.md`：多 pass + `sg_feedback_rgba8` 规范（推荐用于游戏/状态机）
-
-#### 4.1 迁移前准备
-
-1) 确认 shader 资源在 consuming app（通常是 `example/`）的 `pubspec.yaml` 中声明到了 `flutter: shaders:`。
-
-2) 识别 Shadertoy 的每个 pass：
-
-- BufferA/BufferB/BufferC/BufferD
-- Image（主输出）
-
-3) 识别每个 pass 的输入通道（iChannel0..）：
-
-- 来自哪个 buffer（上一 pass 输出）
-- 来自图片 asset
-- 来自键盘纹理（本项目已有 KeyboardInput）
-
-#### 4.2 Shader 文件结构（必须遵守）
-
-每个 pass 文件：
-
-1) 文件开头放迁移日志（可选但推荐）
-2) **第一行 include 必须是**：
-
-```glsl
-#include <../common/common_header.frag>
-```
-
-3) 紧接着声明你需要的 `uniform sampler2D iChannelN;`
-
-4) 如果该 pass 用 `sg_feedback_rgba8`，则紧接着 include：
-
-```glsl
-#include <../common/sg_feedback_rgba8.frag>
-```
-
-5) 文件底部必须 include：
-
-```glsl
-#include <../common/main_shadertoy.frag>
-```
-
-#### 4.3 SkSL 常见不兼容点（迁移时按最小改动修复）
-
-- **不要**把 `sampler2D` 当函数参数传递（改为宏）
-- **不要**全局 `const int[] = int[](...)` 初始化（用 if-chain getter）
-- **不要**位运算（`>> & | ^`）和 int `%`（用 `floor/mod/pow` 等替代）
-- **不要**依赖 `texelFetch`（用 `SG_TEXELFETCH*` 替代）
-- **所有局部变量显式初始化**（SkSL 对未初始化更敏感）
-
-#### 4.4 Dart 侧接线（多 pass + feedback 的最小范式）
-
-典型链路（避免读写冲突）：
-
-- BufferA：读上一帧 feedback，更新状态
-- BufferB：passthrough（只复制 BufferA 输出）
-- Main：只读 BufferB 渲染
-
-要点：
-
-- 数据 buffer 必须设置 `fixedOutputSize` 为 physical 尺寸（例如 `Size(VSIZE.x*4, VSIZE.y)`）
-- feedback 使用 `.feedback()` 或 `.feed(buffer, usePreviousFrame: true)`
-- 如果需要屏幕语义的 `iResolution/iMouse`（而 buffer 渲染到 tiny fixedOutputSize），对该 buffer 打开 `useSurfaceSizeForIResolution = true`
-
-> 注意：一旦开启 `useSurfaceSizeForIResolution`，shader 内不要再用 `iResolution` 反推 pack 比例（因为 `iResolution` 不再等于 render target）。
-
----
-
-### 5. 最小可用示例（片段）
-
-#### 5.1 Wrap 采样
-
-```glsl
-#include <../common/common_header.frag>
-
-uniform sampler2D iChannel0;
-
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord / iResolution.xy;
-    fragColor = SG_TEX0(iChannel0, uv);
-}
-
-#include <../common/main_shadertoy.frag>
-```
-
-#### 5.2 键盘纹理（推荐用 `SG_TEXELFETCH*`）
-
-```glsl
-// 假设 iChannel1 是 keyboard texture
-float keyDown(int keyCode) {
-    return SG_TEXELFETCH1(ivec2(keyCode, 0)).x;
-}
-```
-
----
-
-### 6. 排查清单（遇到画面异常时）
-
-- 画面“分叉/抖动/闪烁”：
-  - 是否发生 lane 串扰？（尝试对标量寄存器写 `vec4(v,v,v,v)` + 读取取平均）
-  - 是否写入了 NaN/Inf？（检查除以 0、normalize、log）
-
-- 画面“只显示一角/被拉伸”：
-  - 是否在 shader 里把 `iResolution` 又乘了 dpr/scale？（本项目里 iResolution 已是像素空间）
-  - 是否打开了 `useSurfaceSizeForIResolution` 但 pass 实际渲染到 `fixedOutputSize`？（坐标系会不一致）
-
-- 贴图 wrap 不生效：
-  - 是否用 `SG_TEX0/1/2/3` 或 `sg_wrapUv` 采样？（不要直接 `texture(iChannelN, uv)`）
-
----
-
-### 7. 参考：Prompt 文件
-
-- `.github/prompts/port_shader.prompt.md`
-- `.github/prompts/port_shader_float.prompt.md`
+- 环绕模式（repeat/mirror/clamp）和着色器端采样
+- 用于状态机的 RGBA8 反馈编码
+- `texelFetch` 替换
+- 着色器文件结构和 SkSL 不兼容性
+- Dart 端多-pass 连接
+- 故障排除清单
