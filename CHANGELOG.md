@@ -1,3 +1,7 @@
+## 0.1.2(2026.01.17)
+
+- Update documentation.
+
 ## 0.1.1(2026.01.13)
 
 - Improved example to support Android/iOS platforms.
