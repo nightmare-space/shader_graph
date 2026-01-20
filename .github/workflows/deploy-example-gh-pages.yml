@@ -1,39 +1,39 @@
 name: Deploy example to GitHub Pages
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
 
 permissions:
-    contents: write
-    pages: write
-    id-token: write
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
-    build-and-deploy:
-        runs-on: ubuntu-latest
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-            - name: Setup Flutter
-              uses: subosito/flutter-action@v2
-              with:
-                  channel: stable
-                  flutter-version: "3.38.4"
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.38.4"
 
-            - name: Install dependencies
-              run: flutter pub get
-              working-directory: ./example
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./example
 
-            - name: Build web
-              run: flutter build web --wasm --base-href /shader_graph/
-              working-directory: ./example
+      - name: Build web
+        run: flutter build web --wasm --base-href /shader_graph/
+        working-directory: ./example
 
-            - name: Deploy to GitHub Pages
-              uses: peaceiris/actions-gh-pages@v4
-              with:
-                  github_token: ${{ secrets.GITHUB_TOKEN }}
-                  publish_dir: ./example/build/web
-                  publish_branch: gh-pages
-                  force_orphan: true
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./example/build/web
+          publish_branch: gh-pages
+          force_orphan: true
