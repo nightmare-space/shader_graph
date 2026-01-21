@@ -1,9 +1,10 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'examples/game.dart';
-import 'examples/animation_controll.dart';
+import 'examples/animation_control.dart';
 import 'examples/float.dart';
 import 'examples/keyboard_input.dart';
 import 'examples/mouse_input.dart';
@@ -33,9 +34,28 @@ class MyApp extends StatelessWidget {
         brightness: Brightness.light,
         primaryColor: Color(0xff006aff),
       ),
-      home: CupertinoPageScaffold(
-        child: const RootPage(),
-      ),
+      onGenerateRoute: (settings) {
+        String? shaderParam;
+        if (kIsWeb) {
+          final uri = Uri.base;
+          shaderParam = uri.queryParameters['example'];
+          debugPrint('URL query parameter "shader": $shaderParam');
+        }
+        if (shaderParam != null && shaderParam.isNotEmpty) {
+          if (shaderParam == 'ReactionDiffusion') {
+            return MaterialPageRoute(
+              builder: (context) => ReactionDiffusionView(),
+              settings: settings,
+            );
+          }
+        }
+
+        // 默认显示画廊首页
+        return CupertinoPageRoute(
+          builder: (context) => const RootPage(),
+          settings: settings,
+        );
+      },
     );
   }
 }
@@ -48,7 +68,7 @@ class RootPage extends StatefulWidget {
 }
 
 class _RootPageState extends State<RootPage> {
-  int currentIndex = 4;
+  int currentIndex = 5;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +83,7 @@ class _RootPageState extends State<RootPage> {
       'Multi-Pass',
       'Float Support',
     ];
+
     return CupertinoPageScaffold(
       backgroundColor: Color(0xfff3f5f9),
       navigationBar: CupertinoNavigationBar(

@@ -46,6 +46,11 @@ flutter:
     - shaders/multi_pass/MacOS Monterey wallpaper.frag
     - shaders/multi_pass/MacOS Monterey wallpaper BufferA.frag
     - shaders/multi_pass/Static Vec4 Grid A.frag
+    - shaders/multi_pass/expansive reaction-diffusion BufferA.frag
+    - shaders/multi_pass/expansive reaction-diffusion BufferB.frag
+    - shaders/multi_pass/expansive reaction-diffusion BufferC.frag
+    - shaders/multi_pass/expansive reaction-diffusion BufferD.frag
+    - shaders/multi_pass/expansive reaction-diffusion.frag
     # wrap & filter
     - shaders/wrap/Wrap Debug.frag
     - shaders/wrap/Black Hole ODE Geodesic Solver.frag
@@ -54,3 +59,4 @@ flutter:
     - shaders/wrap/Tissue.frag
     - shaders/wrap/Transition Burning.frag
     - shaders/wrap/Inverse Bilinear.frag
+    - shaders/touch_simple.frag
