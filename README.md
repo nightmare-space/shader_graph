@@ -16,7 +16,146 @@ When you need more complex pipelines (multi-pass / multiple inputs / feedback / 
 
 The source code of `shader_graph` itself includes extensive Chinese and English comments for easier reading and understanding.
 
+Forgive me, I have not done a good job documenting this project. For those unfamiliar with shaders, these documents can be quite challenging. I have tried my best to make them as simple as possible, but a powerful library inevitably comes with a certain learning curve.
+
 English | [中文](README.zh.md)
+
+## Topics
+
+- [Shader Graph](#shader-graph)
+  - [Topics](#topics)
+  - [Roadmap](#roadmap)
+  - [Foreword](#foreword)
+    - [`shader_graph` can already support very complex multi-pass scenarios](#shader_graph-can-already-support-very-complex-multi-pass-scenarios)
+    - [Float support (RGBA8 feedback) solution](#float-support-rgba8-feedback-solution)
+    - [`texelFetch` support](#texelfetch-support)
+  - [Examples](#examples)
+    - [Example Screenshots](#example-screenshots)
+  - [Ping-Pong \& Multi-Pass \& RGBA8 Feedback](#ping-pong--multi-pass--rgba8-feedback)
+  - [Wrap \& Filter](#wrap--filter)
+    - [Keyboard Input](#keyboard-input)
+  - [Others](#others)
+  - [Quick Start](#quick-start)
+    - [Minimal runnable examples](#minimal-runnable-examples)
+      - [1) Single shader (Widget)](#1-single-shader-widget)
+      - [2) Two passes (A → Main)](#2-two-passes-a--main)
+      - [3) feedback (A → A, plus a Main display)](#3-feedback-a--a-plus-a-main-display)
+  - [ShaderBuffer](#shaderbuffer)
+  - [ShaderBuffer.feed](#shaderbufferfeed)
+    - [Adding a Widget as input](#adding-a-widget-as-input)
+    - [Adding another shader as input](#adding-another-shader-as-input)
+    - [Adding keyboard as input](#adding-keyboard-as-input)
+    - [Adding an image asset as input](#adding-an-image-asset-as-input)
+    - [feedback / ping-pong](#feedback--ping-pong)
+    - [Custom ShaderInput](#custom-shaderinput)
+    - [Wrap (repeat / mirror / clamp)](#wrap-repeat--mirror--clamp)
+    - [Custom Output Size](#custom-output-size)
+  - [ShaderSurface.auto](#shadersurfaceauto)
+  - [ShaderSurface.builder](#shadersurfacebuilder)
+  - [Animation Control](#animation-control)
+    - [Basic Usage](#basic-usage)
+    - [Integration](#integration)
+    - [Behavior](#behavior)
+  - [Topological Sorting](#topological-sorting)
+  - [toImageSync Memory Leak](#toimagesync-memory-leak)
+  - [Copilot](#copilot)
+  - [ShaderToy → Flutter porting guide](#shadertoy--flutter-porting-guide)
+
+
+---
+
+## Roadmap
+
+- [x] Using one shader as a buffer input to another shader (Multi-Pass)
+- [x] Using images as shader buffer inputs
+- [x] Rendering a Widget into a texture and using it as a buffer input
+- [x] Feedback input (Ping-Pong: previous frame → next frame)
+- [x] Mouse input & Keyboard input
+- [x] Automatic topological sorting
+- [x] texelFetch (texel size calculated automatically via macros)
+- [x] Shadertoy-style wrap modes (Clamp / Repeat / Mirror)
+- [x] Shadertoy-style filters (Linear / Nearest / Mipmap)
+  - [x] Nearest / Linear: basically supported, with minor differences
+  - [ ] Mipmap: not supported yet; exploring mipmap-like approaches feasible in Flutter
+- [x] Animation control (ShaderController for play/pause functionality)
+- [x] Custom Uniforms
+- [ ] Camera input & Audio input & Audio output (shader_graph itself will not integrate these features later, but will provide a feasible solution for them)
+
+---
+
+## Foreword
+
+I found the shaders on Shadertoy extremely interesting. Some of them are essentially complete games, which led me to a question:
+
+**Could these shaders be ported to run in Flutter?**
+
+First of all, I want to thank the [shader_buffers](https://github.com/alnitak/shader_buffers) project, which initially enabled me to port some Shadertoy shaders to Flutter.
+
+However, during practical use, I gradually realized that its design and functionality differed significantly from my needs. Some of these issues were addressed by contributing fixes via pull requests.
+
+As my requirements continued to grow, I realized that the problem was not limited to shader_buffers. Instead, it reflected an entire category of issues that almost all existing Flutter shader frameworks had not addressed.
+
+As a result, `shader_graph` was born.
+
+### `shader_graph` can already support very complex multi-pass scenarios
+
+Many of the stunning effects on ShaderToy are produced by mixing multiple shaders and various inputs. Most existing Flutter shader rendering solutions are essentially **single-pass**, making it very difficult to implement true multi-pass feedback scenarios.
+
+It is even more unrealistic to achieve a full ShaderToy-style pipeline with **multi-pass + feedback + cyclic dependencies + filter + wrap**.
+
+This is the current upper bound I’ve observed that `shader_graph` can support:  
+[expansive reaction-diffusion](https://www.shadertoy.com/view/4dcGW2)
+
+The detailed dependency graph is as follows:
+
+...
+     ┌─────┐                  ┌───────┐
+  ┌──|     |◀─────────────────| Noise | 
+  |  |  A  |◀────────────┐    └───┬───┘ 
+  └─▶│     │◀──────┐     |        |     
+     └─┬─┬─┘       │     |        |     
+  ┌────┘ │         │     |        |     
+  |      ▼         │     |        |     
+  |   ┌─────┐    ┌─┴─┐   |        |     
+  |   │  B  │    | D |   |        |
+  |   └──┬──┘    └───┘   |        |     
+  |      ▼               |        |     
+  |   ┌─────┐            |        |     
+  |   │  C  │────────────┘        |     
+  |   └──┬──┘                     │     
+  |      └──────┐                 |
+  |             ▼                 |
+  |      ┌─────────────┐          |
+  └─────▶│    Image    │◀─────────┘
+         └─────────────┘
+...
+
+**A** depends on its own previous frame, **C** depends on A’s previous frame, and **A** in turn depends on C’s previous frame, forming a **cross-frame cyclic dependency**. This is now solvable.
+
+> The visual result is slightly inconsistent. Once Flutter Impeller supports more sampler features, the reproduction quality should improve—especially for `texelFetch`, filter, and wrap behavior.
+
+- Running GIF  
+- Online preview
+
+---
+
+### Float support (RGBA8 feedback) solution
+
+Flutter feedback textures are typically **RGBA8**, which cannot reliably store arbitrary floating-point state.
+
+This project provides a unified migration solution: `sg_feedback_rgba8`.  
+Scalars are encoded into RGB (24-bit) and packed horizontally into 4 lanes, preserving the semantic of **“one texel = vec4”**.
+
+---
+
+### `texelFetch` support
+
+Provided via `common_header.frag`:
+
+- `SG_TEXELFETCH`
+- `SG_TEXELFETCH0..3`
+
+These macros replace native `texelFetch` calls and automatically obtain channel resolutions from `iChannelResolution0..3`. Note that the result may still be affected by Flutter’s internal filtering behavior.
 
 ---
 
@@ -37,43 +176,7 @@ You can visit the online demos to experience the power of shaders and see what k
 
 ---
 
-## Roadmap
-
-- [x] Support using one shader as a buffer input to another shader (Multi-Pass)
-- [x] Support using images as shader buffer inputs
-- [x] Support feedback input (Ping-Pong: previous frame → next frame)
-- [x] Support mouse input
-- [x] Support keyboard input
-- [x] Support wrap modes (Clamp / Repeat / Mirror)
-- [x] Automatic topological sorting
-- [x] Support texelFetch (texel size calculated automatically via macros)
-- [x] Support Shadertoy-style filters (Linear / Nearest / Mipmap)
-  - [x] Nearest / Linear: basically supported, with minor differences
-  - [ ] Mipmap: not supported yet; exploring mipmap-like approaches feasible in Flutter
-- [x] Support rendering a Widget into a texture and using it as a buffer input
-- [x] Animation control (ShaderController for play/pause functionality)
-
----
-
-## Float Support (RGBA8 Feedback)
-
-Flutter feedback textures are usually RGBA8 and cannot reliably store arbitrary float values.
-
-This project provides a unified porting solution: `sg_feedback_rgba8`.  
-Scalar values are encoded into RGB (24-bit), and packed horizontally using 4 lanes, preserving the semantic model of “one texel = one vec4”.
-
----
-
-## texelFetch Support
-
-Provided by `common_header.frag`:
-
-- `SG_TEXELFETCH`
-- `SG_TEXELFETCH0..3`
-
-These macros replace native `texelFetch` calls and automatically obtain channel resolutions via `iChannelResolution0..3`.
-
----
+### Example Screenshots
 
 ## Ping-Pong & Multi-Pass & RGBA8 Feedback
 
@@ -99,30 +202,45 @@ These macros replace native `texelFetch` calls and automatically obtain channel 
 The following examples demonstrate the decisive impact of wrap and filter modes on shader results.  
 Without support for these features, the visual output differs significantly from Shadertoy.
 
+<table>
+  <tr>
+    <td>
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Raw Image.png?raw=true">
+      <br>
+      Raw Image
+    </td>
+    <td>
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Transition%20Burning.png?raw=true">
+      <br>
+      Transition Burning
+    </td>
+    <td>
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Tissue.png?raw=true">
+      <br>
+      Tissue
+    </td>
+  </tr>
+</table>
 
-**Raw Image**
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Raw Image.png?raw=true">
-
-**Transition Burning**
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Transition%20Burning.png?raw=true">
-
-**Tissue**
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Tissue.png?raw=true">
-
-**Black Hole**
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Black%20Hole.png?raw=true">
-
-**Broken Time Gate**
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Broken%20Time%20Gate.png?raw=true">
-
-**Goodbye Dream Clouds**
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Goodbye%20Dream%20Clouds.png?raw=true">
+<table>
+  <tr>
+    <td>
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Black%20Hole.png?raw=true">
+      <br>
+      Black Hole
+    </td>
+    <td>
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Broken%20Time%20Gate.png?raw=true">
+      <br>
+      Broken Time Gate
+    </td>
+    <td>
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Goodbye%20Dream%20Clouds.png?raw=true">
+      <br>
+      Goodbye Dream Clouds
+    </td>
+  </tr>
+</table>
 
 ### Keyboard Input
 
@@ -162,33 +280,15 @@ Without support for these features, the visual output differs significantly from
 
 ---
 
-## Foreword
-
-My understanding of shaders used to be quite vague. A friend recommended that I read  
-[The Book of Shaders](https://thebookofshaders.com/). I read part of it, but never truly grasped the underlying principles.
-
-However, I found the shaders on Shadertoy extremely interesting. Some of them are essentially complete games, which led me to a question:
-
-**Could these shaders be ported to run in Flutter?**
-
-First of all, I would like to thank the author of [shader_buffers](https://github.com/alnitak/shader_buffers). This project was what initially allowed me to run some Shadertoy shaders in Flutter.
-
-However, during practical use, I gradually realized that its design and functionality differed significantly from my needs. Some of these issues were addressed by contributing fixes via pull requests.
-
-As my requirements continued to grow, I realized that the problem was not limited to shader_buffers. Instead, it reflected an entire category of issues that almost all existing Flutter shader frameworks had not addressed.
-
-As a result, `shader_graph` was born.
-
----
-
 ## Quick Start
 
 First, one important point must be clarified:
 
 **Shadertoy shaders must be ported before they can run in Flutter.**
 
-This project provides a helper prompt for porting:  
-`port_shader.prompt.md`
+**And currently, you must use the common_header.frag/main_shadertoy.frag in the example/shaders/common directory; otherwise, Wrap/Filter/texelFetch cannot be implemented. If you need to support rgba8 feedback, you also need to use sg_feedback_rgba8.frag.**
+
+This project provides a helper prompt for porting: `port_shader.prompt.md`
 
 The basic workflow is as follows:
 
@@ -198,8 +298,6 @@ The basic workflow is as follows:
 ```text
 Follow instructions in [port_shader.prompt.md](.github/prompts/port_shader.prompt.md).
 ```
-
-Example code can be found at: [example](example/lib/main.dart)
 
 ### Minimal runnable examples
 
@@ -402,7 +500,7 @@ abstract class ShaderInput {
 
 ---
 
-## Wrap (repeat / mirror / clamp)
+### Wrap (repeat / mirror / clamp)
 
 Flutter Runtime Shader does not directly expose sampler wrap / filter states.
 
@@ -426,7 +524,7 @@ Do not directly use `texture(iChannelN, uv)`.
 
 ---
 
-## Output Size
+### Custom Output Size
 
 By default, the output size of each `ShaderBuffer` is the same as the final Widget size.
 
@@ -538,47 +636,20 @@ The previous examples only involve a single shader.
 For more complex pipelines such as:
 
 ```text
-┌─────┐    ┌─────┐    ┌─────┐
-│  A  │───▶│  B  │───▶│  C  │
-│ ↺ A │    └─────┘    └─────┘
+┌─────┐    ┌─────┐    ┌────────┐
+│  A  │───▶│  B  │───▶│  Main  │
+│ ↺ A │    └─────┘    └────────┘
 └─────┘
 ```
-
-Or:
-
-```text
-┌──────────── Shader A ────────────┐
-│                                  │
-│   ┌─────┐                        │
-│   │  A  │◀───────────────┐       │
-│   └──┬──┘                │       │
-│      │                   │       │
-│      ▼                   │       │
-│   ┌─────┐                │       │
-│   │  B  │────────────────┘       │
-│   └──┬──┘                        │
-│      ▼                           │
-│   ┌─────┐                        │
-│   │  C  │                        │
-│   └──┬──┘                        │
-└──────┼───────────────────────────┘
-       ▼
-   ┌─────────┐
-   │    D    │
-   │  A B C  │
-   └─────────┘
-```
-
 
 For such multi-pass scenarios, you can use `ShaderSurface.builder` to build the entire render graph.
 
 ```dart
 ShaderSurface.builder(() {
-  final bufferA = '$asset_shader_buffera'.feedback().feedKeyboard();
-  final mainBuffer = '$asset_shader_main'.feed(bufferA);
-  // Standard scheme: physical width = virtual * 4
-  bufferA.fixedOutputSize = const Size(14 * 4.0, 14);
-  return [bufferA, mainBuffer];
+  final bufferA = '$asset_shader_buffera'.feedback();
+  final bufferB = '$asset_shader_bufferb'.feed(bufferA);
+  final mainBuffer = '$asset_shader_main'.feed(bufferB);
+  return [bufferA, bufferB, mainBuffer];
 })
 ```
 

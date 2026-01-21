@@ -16,7 +16,147 @@
 
 源码中则包含了大量中英文注释，方便阅读与理解。
 
+请原谅，这个项目的文档，我并没有处理得很好，对于不了解着色器的朋友，这些文档简直是灾难级的，我只想尽可能的让他们变得简单，但一个库如果真的很强大，就必须要有一定的学习成本。
+
 [English](README.md) | 中文
+
+## 目录
+
+- [Shader Graph](#shader-graph)
+  - [目录](#目录)
+  - [路线图](#路线图)
+  - [前言](#前言)
+    - [shader\_graph 已经能支持很复杂的多 Pass 场景](#shader_graph-已经能支持很复杂的多-pass-场景)
+    - [Float 支持（RGBA8 feedback）方案](#float-支持rgba8-feedback方案)
+    - [texelFetch 支持](#texelfetch-支持)
+  - [示例](#示例)
+    - [示例截图](#示例截图)
+    - [Ping-Pong \& Multi-Pass \& RGBA8 Feedback](#ping-pong--multi-pass--rgba8-feedback)
+    - [Wrap \& Filter](#wrap--filter)
+    - [键盘输入](#键盘输入)
+    - [其他](#其他)
+  - [快速开始](#快速开始)
+    - [最小可运行示例](#最小可运行示例)
+      - [1) 单 Shader（Widget）](#1-单-shaderwidget)
+      - [2) 两个 Pass（A → Main）](#2-两个-passa--main)
+      - [3) feedback（A → A → Main）](#3-feedbacka--a--main)
+  - [ShaderBuffer](#shaderbuffer)
+  - [ShaderBuffer.feed](#shaderbufferfeed)
+    - [添加 Widget 作为输入](#添加-widget-作为输入)
+    - [添加另一个着色器作为输入](#添加另一个着色器作为输入)
+    - [添加键盘作为输入](#添加键盘作为输入)
+    - [添加资源图片作为输入](#添加资源图片作为输入)
+    - [feedback / ping-pong](#feedback--ping-pong)
+    - [自定义 Uniform](#自定义-uniform)
+    - [自定义输入](#自定义输入)
+    - [Wrap（repeat / mirror / clamp）](#wraprepeat--mirror--clamp)
+    - [设置输出尺寸（Output Size）](#设置输出尺寸output-size)
+  - [ShaderSurface.auto](#shadersurfaceauto)
+  - [ShaderSurface.builder](#shadersurfacebuilder)
+  - [动画控制](#动画控制)
+    - [基本用法](#基本用法)
+    - [集成方式](#集成方式)
+    - [行为说明](#行为说明)
+  - [拓扑排序](#拓扑排序)
+  - [toImageSync 内存泄露](#toimagesync-内存泄露)
+  - [Copilot](#copilot)
+  - [ShaderToy → Flutter 移植指南](#shadertoy--flutter-移植指南)
+
+
+---
+
+## 路线图
+
+- [x] 将一个 Shader 作为 Buffer 输入到另一个 Shader（Multi-Pass）
+- [x] 将 Widget 渲染为纹理，再作为 Buffer 输入
+- [x] 将图片资源作为 Buffer 输入到 Shader
+- [x] 反馈输入（Ping-Pong：上一帧 → 下一帧）
+- [x] 鼠标事件 & 键盘事件
+- [x] 自动拓扑排序
+- [x] texelFetch（通过宏自动计算 texel 大小）
+- [x] Shadertoy 风格的 Wrap（Clamp / Repeat / Mirror）
+- [x] Shadertoy 风格的 Filter（Linear / Nearest / Mipmap）
+  - [x] Nearest / Linear：已基本支持，存在轻微差异
+  - [ ] Mipmap：暂不支持，正在探索 Flutter 中可落地的 mipmap-like 方案
+- [x] 动画控制（ShaderController 提供播放/暂停功能）
+- [x] 自定义 Uniform
+- [ ] 摄像头输入 & 音频输入 & 音频输出方案(shader_graph后续本身不会集成这些东西，但会为这些功能提供一个可行的方案)
+
+---
+
+## 前言
+
+我觉得 Shadertoy 上的着色器非常有趣，有些作品甚至本身就是一个完整的游戏，这让我产生了一个想法：
+
+**能不能把这些着色器移植到 Flutter 上运行？**
+
+首先要感谢 [shader_buffers](https://github.com/alnitak/shader_buffers) 这个项目，让我最初能够把一些 Shadertoy 的着色器代码移植到 Flutter 中运行。
+
+但在实际使用过程中，我逐渐发现它在设计和功能上与我的需求存在较大差异。其中一部分问题，我已经通过提交 PR 的方式参与修复。
+
+随着需求的不断增加，我意识到问题并不只存在于 shader_buffers，而是几乎所有 Flutter 现有的着色器框架都没有覆盖的一整类问题。
+
+因此，`shader_graph` 诞生了。
+
+### shader_graph 已经能支持很复杂的多 Pass 场景
+
+ShaderToy 上很多炫酷的效果都是多个着色器和各种输入混合得到的结果，大部分的现有的 flutter 渲染 shader 的方案，基本都是单 Pass 的，很难实现这样的多 pass 反馈场景。
+
+更不可能实现多 Pass + feedback + 循坏依赖 + Filter + Wrap 的完整 Shadertoy 风格。
+
+这是我目前观测到的 shader_graph 所能支持的上限 [expansive reaction-diffusion](https://www.shadertoy.com/view/4dcGW2)
+
+详细的依赖图如下:
+
+```text
+     ┌─────┐                  ┌───────┐
+  ┌──|     |◀─────────────────| Noise | 
+  |  |  A  |◀────────────┐    └───┬───┘ 
+  └─▶│     │◀──────┐     |        |     
+     └─┬─┬─┘       │     |        |     
+  ┌────┘ │         │     |        |     
+  |      ▼         │     |        |     
+  |   ┌─────┐    ┌─┴─┐   |        |     
+  |   │  B  │    | D |   |        |
+  |   └──┬──┘    └───┘   |        |     
+  |      ▼               |        |     
+  |   ┌─────┐            |        |     
+  |   │  C  │────────────┘        |     
+  |   └──┬──┘                     │     
+  |      └──────┐                 |
+  |             ▼                 |
+  |      ┌─────────────┐          |
+  └─────▶│    Image    │◀─────────┘
+         └─────────────┘
+```
+
+A 依赖自身上一帧的输入，C 依赖 A 的上一帧输入，而 A 又依赖 C 的上一帧输入，形成了一个跨帧的循环依赖，目前也能解决了。
+
+> 效果有些微的不一致，也许等 flutter impeller 支持更多的 sampler 特性后，能更好地还原，特别是 texelFetch，filter/wrap 等。
+
+运行的 Gif
+
+在线预览
+
+---
+
+### Float 支持（RGBA8 feedback）方案
+
+Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状态。
+
+本项目提供统一的移植方案 `sg_feedback_rgba8`：  
+将标量编码进 RGB（24-bit），并通过横向 4-lane 打包，保留“一个 texel = vec4”的语义。
+
+---
+
+### texelFetch 支持
+
+通过 `common_header.frag` 提供的：
+
+- `SG_TEXELFETCH`
+- `SG_TEXELFETCH0..3`
+
+宏替代原生 `texelFetch` 调用，并使用 `iChannelResolution0..3` 自动获得通道分辨率，注意，这仍然可能受到 Flutter 本身的 Filter 干扰。
 
 ---
 
@@ -26,70 +166,33 @@
 
 这是目前最完整的示例集合，包含 **100+ 个 Shadertoy 着色器的 Flutter 移植示例**，非常推荐直接参考。
 
-包括上面截图展示的是当前项目的 [example](example/lib/main.dart)，也包含了针对各个功能点的示例
+包括上下面截图展示的是当前项目的 [example](example/lib/main.dart)，也包含了针对各个功能点的示例
 
 更不错的是，shader_graph 的 example 和大部分的 awesome_flutter_shaders 中的着色器都支持 flutter web。
 
 可以访问在线示例，感受着色器的魅力，以及使用这个库，能获得什么样的效果
 
-- [shader_graph example web](https://nightmare-space.github.io/shader_graph/)
-- [awesome_flutter_shaders web](https://nightmare-space.github.io/awesome_flutter_shaders/)
+- [shader_graph example web](https://nightmare-space.github.io/shader_graph)
+- [awesome_flutter_shaders web](https://nightmare-space.github.io/awesome_flutter_shaders)
 
 ---
 
-## 路线图
-
-- [x] 支持将一个 Shader 作为 Buffer 输入到另一个 Shader（Multi-Pass）
-- [x] 支持将图片作为 Buffer 输入到 Shader
-- [x] 支持反馈输入（Ping-Pong：上一帧 → 下一帧）
-- [x] 支持鼠标事件
-- [x] 支持键盘事件
-- [x] 支持 Wrap（Clamp / Repeat / Mirror）
-- [x] 自动拓扑排序
-- [x] 支持 texelFetch（通过宏自动计算 texel 大小）
-- [x] 支持 Shadertoy 风格的 Filter（Linear / Nearest / Mipmap）
-  - [x] Nearest / Linear：已基本支持，存在轻微差异
-  - [ ] Mipmap：暂不支持，探索 Flutter 中可落地的 mipmap-like 方案
-- [x] 支持将 Widget 渲染为纹理，再作为 Buffer 输入
-- [x] 动画控制（ShaderController 提供播放/暂停功能）
-
----
-
-## Float 支持（RGBA8 feedback）
-
-Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状态。
-
-本项目提供统一的移植方案 `sg_feedback_rgba8`：  
-将标量编码进 RGB（24-bit），并通过横向 4-lane 打包，保留“一个 texel = vec4”的语义。
-
----
-
-## texelFetch 支持
-
-通过 `common_header.frag` 提供的：
-
-- `SG_TEXELFETCH`
-- `SG_TEXELFETCH0..3`
-
-宏替代原生 `texelFetch` 调用，并使用 `iChannelResolution0..3` 自动获得通道分辨率。
-
----
+### 示例截图
 
 ### Ping-Pong & Multi-Pass & RGBA8 Feedback
 
 <table>
   <tr>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.png?raw=true">
       <br>
       Bricks Game
     </td>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Pacman%20Game.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Pacman%20Game.png?raw=true">
       <br>
       Pacman Game
     </td>
-    <td></td>
   </tr>
 </table>
 
@@ -99,36 +202,51 @@ Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状�
 
 以下示例展示了 Wrap / Filter 对着色器效果的决定性影响。如果不支持这些特性，画面效果会与 Shadertoy 存在明显差异。
 
-**Raw Image**
+<table>
+  <tr>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Raw Image.png?raw=true">
+      <br>
+      Raw Image
+    </td>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Transition%20Burning.png?raw=true">
+      <br>
+      Transition Burning
+    </td>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Tissue.png?raw=true">
+      <br>
+      Tissue
+    </td>
+  </tr>
+</table>
 
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Raw Image.png?raw=true">
+<table>
+  <tr>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Black%20Hole.png?raw=true">
+      <br>
+      Black Hole
+    </td>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Broken%20Time%20Gate.png?raw=true">
+      <br>
+      Broken Time Gate
+    </td>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Goodbye%20Dream%20Clouds.png?raw=true">
+      <br>
+      Goodbye Dream Clouds
+    </td>
+  </tr>
+</table>
 
-**Transition Burning**
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Transition%20Burning.png?raw=true">
-
-**Tissue**
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Tissue.png?raw=true">
-
-**Black Hole**
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Black%20Hole.png?raw=true">
-
-**Broken Time Gate**
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Broken%20Time%20Gate.png?raw=true">
-
-**Goodbye Dream Clouds**
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Goodbye%20Dream%20Clouds.png?raw=true">
-
-
-### Keyboard Input
+### 键盘输入
 
 > 注意：这些画面并非 Flutter UI，而是完全由着色器渲染，并且可以实时响应键盘输入
 
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Keyboard.png?raw=true">
+<img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Keyboard.png?raw=true">
 
 ### 其他
 
@@ -143,6 +261,8 @@ Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状�
       <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Noise%20Lab.png?raw=true">
       <br>
       Noise Lab
+    </td>
+    <td>
     </td>
   </tr>
   <tr>
@@ -161,33 +281,17 @@ Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状�
 
 ---
 
-## 前言
-
-我以前对着色器的理解一直比较模糊。朋友推荐我阅读  
-[The Book of Shaders](https://thebookofshaders.com/)，我看了一部分，但始终没能真正理解其中的原理。
-
-但我觉得 Shadertoy 上的着色器实在太有趣了，有些作品甚至本身就是一个完整的游戏，这让我产生了一个想法：
-
-**能不能把这些着色器移植到 Flutter 上运行？**
-
-首先要感谢 [shader_buffers](https://github.com/alnitak/shader_buffers) 的作者。正是这个项目，让我最初能够把一些 Shadertoy 的着色器代码移植到 Flutter 中运行。
-
-但在实际使用过程中，我逐渐发现它在设计和功能上与我的需求存在较大差异。其中一部分问题，我已经通过提交 PR 的方式参与修复。
-
-随着需求的不断增加，我意识到问题并不只存在于 shader_buffers，而是几乎所有 Flutter 现有的着色器框架都没有覆盖的一整类问题。
-
-因此，`shader_graph` 诞生了。
-
----
-
 ## 快速开始
 
 首先需要明确一点：
 
 **Shadertoy 的着色器代码必须经过移植，才能在 Flutter 中运行。**
 
-项目中提供了辅助移植的 Prompt：  
-`port_shader.prompt.md`
+**并且当前一定要配合项目 example/shaders/common 下的 common_header.frag/main_shadertoy.frag，不然无法实现 Wrap/Filter/texelFetch，如果需要支持 rgba8 feedback，也需要配合 sg_feedback_rgba8.frag**
+
+> example/shaders/common 下文件的位置，我后面会思考一下，让他们看起来更重要一些，而不是在 example 目录下。
+
+项目中提供了辅助移植的 Prompt：`port_shader.prompt.md`
 
 基本流程如下：
 
@@ -197,8 +301,6 @@ Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状�
 ```text
 Follow instructions in [port_shader.prompt.md](.github/prompts/port_shader.prompt.md).
 ```
-
-示例代码见：[example](example/lib/main.dart)
 
 ---
 
@@ -381,6 +483,62 @@ final bufferA =
     .feedKeyboard();
 ```
 
+### 自定义 Uniform
+
+例如对于着色器：
+
+```frag
+#include <common/common_header.frag>
+
+uniform float liftStrength;
+uniform float liftRadius;
+uniform float pointsPerRow;
+uniform float baseDotOpacity;
+uniform float swapProgress;
+
+uniform vec4 iMouse1;
+uniform vec4 iMouse2;
+uniform vec4 iMouse3;
+uniform vec4 iMouse4;
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+  /// Shader logic here
+}
+
+#include <common/main_shadertoy.frag>
+
+```
+
+Dart 代码：
+
+```dart
+buffer.setUniform(0, 0.0); // liftStrength
+buffer.setUniform(1, 0.2); // liftRadius
+buffer.setUniform(2, 24.0); // pointsPerRow
+buffer.setUniform(3, 0.2); // baseDotOpacity
+buffer.setUniform(4, 0.0); // swapProgress
+
+// iMouse1-4
+for (int i = 0; i < 4; i++) {
+  buffer.setUniform(5 + i, [-1.0, -1.0, -1.0, -1.0]);
+}
+```
+
+你可以随时更改某个 uniform 的值：
+
+```dart
+AnimationController controller = AnimationController(
+  vsync: this,
+  duration: const Duration(milliseconds: 100),
+);
+controller.addListener(() {
+  buffer.setUniform(0, controller.value);
+});
+```
+
+不需要手动调用 setState()，框架会在下一帧自动将新的 uniform 传递给着色器
+
 ### 自定义输入
 
 目前自定义空间有限，且没有合适的回调开发者更新的时机，但如果实现一个 `ShaderInput`，仍然可以实现自定义输入源。例如相机的输出流、音频流等，后续可能会实现
@@ -403,7 +561,7 @@ abstract class ShaderInput {
 
 ---
 
-## Wrap（repeat / mirror / clamp）
+### Wrap（repeat / mirror / clamp）
 
 Flutter Runtime Shader 不直接暴露 sampler 的 wrap / filter 状态。
 
@@ -427,7 +585,7 @@ buffer.feed('$texture_asset_path', wrap: WrapMode.repeat);
 
 ---
 
-## 输出尺寸（Output Size）
+### 设置输出尺寸（Output Size）
 
 默认情况下，每个 ShaderBuffer 的输出尺寸等同于最终 Widget 的尺寸。
 
@@ -453,6 +611,8 @@ buffer.fixedOutputSize = const Size(64, 64);
 ## ShaderSurface.auto
 
 `ShaderSurface.auto` 返回一个 Widget，可直接用于展示 Shader。
+
+> 当然你也可以直接使用 ShaderSurface(buffers: [...])，但 auto 更加方便。
 
 ```dart
 Center(
@@ -537,47 +697,23 @@ Column(
 
 当存在复杂的多 Pass 依赖关系时，应使用 `ShaderSurface.builder`。
 
+例如
+
 ```text
-┌─────┐    ┌─────┐    ┌─────┐
-│  A  │───▶│  B  │───▶│  C  │
-│ ↺ A │    └─────┘    └─────┘
+┌─────┐    ┌─────┐    ┌────────┐
+│  A  │───▶│  B  │───▶│  Main  │
+│ ↺ A │    └─────┘    └────────┘
 └─────┘
-```
-
-或者
-
-```text
-┌──────────── Shader A ────────────┐
-│                                  │
-│   ┌─────┐                        │
-│   │  A  │◀───────────────┐       │
-│   └──┬──┘                │       │
-│      │                   │       │
-│      ▼                   │       │
-│   ┌─────┐                │       │
-│   │  B  │────────────────┘       │
-│   └──┬──┘                        │
-│      ▼                           │
-│   ┌─────┐                        │
-│   │  C  │                        │
-│   └──┬──┘                        │
-└──────┼───────────────────────────┘
-       ▼
-   ┌─────────┐
-   │    D    │
-   │  A B C  │
-   └─────────┘
 ```
 
 这种多 Pass 场景下，`ShaderSurface.builder` 提供了一个回调函数，允许你在其中创建和配置多个 `ShaderBuffer`，并返回它们的列表。
 
 ```dart
 ShaderSurface.builder(() {
-  final bufferA = '$asset_shader_buffera'.feedback().feedKeyboard();
-  final mainBuffer = '$asset_shader_main'.feed(bufferA);
-  // Standard scheme: physical width = virtual * 4
-  bufferA.fixedOutputSize = const Size(14 * 4.0, 14);
-  return [bufferA, mainBuffer];
+  final bufferA = '$asset_shader_buffera'.feedback();
+  final bufferB = '$asset_shader_bufferb'.feed(bufferA);
+  final mainBuffer = '$asset_shader_main'.feed(bufferB);
+  return [bufferA, bufferB, mainBuffer];
 })
 ```
 
@@ -627,11 +763,6 @@ ShaderSurface.builder(
   shaderController: controller,
 );
 
-// 与 ShaderSurface.buffers 一起使用
-ShaderSurface.buffers(
-  [bufferA, mainBuffer],
-  shaderController: controller,
-);
 ```
 
 ### 行为说明
