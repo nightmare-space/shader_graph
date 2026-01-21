@@ -108,7 +108,7 @@ This is the current upper bound I’ve observed that `shader_graph` can support:
 
 The detailed dependency graph is as follows:
 
-...
+```text
      ┌─────┐                  ┌───────┐
   ┌──|     |◀─────────────────| Noise | 
   |  |  A  |◀────────────┐    └───┬───┘ 
@@ -128,7 +128,7 @@ The detailed dependency graph is as follows:
   |      ┌─────────────┐          |
   └─────▶│    Image    │◀─────────┘
          └─────────────┘
-...
+```
 
 **A** depends on its own previous frame, **C** depends on A’s previous frame, and **A** in turn depends on C’s previous frame, forming a **cross-frame cyclic dependency**. This is now solvable.
 
