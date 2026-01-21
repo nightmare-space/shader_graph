@@ -7,6 +7,8 @@ class ShaderBuffer extends ChangeNotifier {
     this.name,
     this.fixedOutputSize,
   });
+// 存储：key = 逻辑槽位，value = 任意类型值
+  final Map<int, dynamic> _customUniforms = {};
 
   /// 着色器资源路径，不知道 Flutter 什么时候可以支持用 File 对象加载着色器
   ///
@@ -51,6 +53,11 @@ class ShaderBuffer extends ChangeNotifier {
   bool get isDisposed => _isDisposed;
 
   final List<ShaderInput> _inputs = [];
+
+  ShaderBuffer setUniform(int slot, dynamic value) {
+    _customUniforms[slot] = value;
+    return this;
+  }
 
   ShaderBuffer feedWidgetInput(
     Widget widget, {
@@ -338,6 +345,7 @@ class ShaderBuffer extends ChangeNotifier {
     // Encoded into a vec4 `iChannelWrap` (x/y/z/w == channel 0..3).
     // This is implemented shader-side as a UV transform, not as a real GPU sampler state.
     _setChannelUniforms();
+    _setCustomUniforms();
     stopwatch.stop();
     // print('Setup uniforms took: ${stopwatch.elapsedMicroseconds} µs');
     int samplerIndex = 0;
@@ -361,6 +369,48 @@ class ShaderBuffer extends ChangeNotifier {
     } catch (e) {
       log('Error setting up shader samplers for $shaderAssetPath: $e');
       throw Exception('Failed to set up shader samplers for $shaderAssetPath: $e');
+    }
+  }
+
+  void _setCustomUniforms() {
+    final sortedSlots = _customUniforms.keys.toList()..sort();
+    int offset = index;
+
+    for (final slot in sortedSlots) {
+      final value = _customUniforms[slot]!;
+
+      if (value is double) {
+        _shader!.setFloat(offset, value);
+        offset += 1;
+      } else if (value is int) {
+        _shader!.setFloat(offset, value.toDouble());
+        offset += 1;
+      } else if (value is bool) {
+        _shader!.setFloat(offset, value ? 1.0 : 0.0);
+        offset += 1;
+      } else if (value is Offset) {
+        _shader!
+          ..setFloat(offset, value.dx)
+          ..setFloat(offset + 1, value.dy);
+        offset += 2;
+      } else if (value is Size) {
+        _shader!
+          ..setFloat(offset, value.width)
+          ..setFloat(offset + 1, value.height);
+        offset += 2;
+      } else if (value is Color) {
+        _shader!
+          ..setFloat(offset, value.r / 0xff)
+          ..setFloat(offset + 1, value.g / 0xff)
+          ..setFloat(offset + 2, value.b / 0xff)
+          ..setFloat(offset + 3, value.a / 0xff);
+        offset += 4;
+      } else if (value is List<double>) {
+        for (int i = 0; i < value.length; i++) {
+          _shader!.setFloat(offset + i, value[i]);
+        }
+        offset += value.length;
+      }
     }
   }
 
