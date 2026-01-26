@@ -25,6 +25,11 @@
 - [Shader Graph](#shader-graph)
   - [目录](#目录)
   - [路线图](#路线图)
+  - [快速开始](#快速开始)
+    - [最小可运行示例](#最小可运行示例)
+      - [1) 单 Shader（Widget）](#1-单-shaderwidget)
+      - [2) 两个 Pass（A → Main）](#2-两个-passa--main)
+      - [3) feedback（A → A → Main）](#3-feedbacka--a--main)
   - [前言](#前言)
     - [shader\_graph 已经能支持很复杂的多 Pass 场景](#shader_graph-已经能支持很复杂的多-pass-场景)
     - [Float 支持（RGBA8 feedback）方案](#float-支持rgba8-feedback方案)
@@ -35,11 +40,6 @@
     - [Wrap \& Filter](#wrap--filter)
     - [键盘输入](#键盘输入)
     - [其他](#其他)
-  - [快速开始](#快速开始)
-    - [最小可运行示例](#最小可运行示例)
-      - [1) 单 Shader（Widget）](#1-单-shaderwidget)
-      - [2) 两个 Pass（A → Main）](#2-两个-passa--main)
-      - [3) feedback（A → A → Main）](#3-feedbacka--a--main)
   - [ShaderBuffer](#shaderbuffer)
   - [ShaderBuffer.feed](#shaderbufferfeed)
     - [添加 Widget 作为输入](#添加-widget-作为输入)
@@ -84,6 +84,67 @@
 
 ---
 
+## 快速开始
+
+首先需要明确一点：
+
+**Shadertoy 的着色器代码必须经过移植，才能在 Flutter 中运行。**
+
+**并且当前一定要配合项目 example/shaders/common 下的 common_header.frag/main_shadertoy.frag，不然无法实现 Wrap/Filter/texelFetch，如果需要支持 rgba8 feedback，也需要配合 sg_feedback_rgba8.frag**
+
+> example/shaders/common 下文件的位置，我后面会思考一下，让他们看起来更重要一些，而不是在 example 目录下。
+
+项目中提供了辅助移植的 Prompt：`port_shader.prompt.md`
+
+基本流程如下：
+
+1. 打开需要移植的着色器文件（建议直接放在项目中）
+2. 在 Copilot 等 AI 工具中输入对应 Prompt
+
+```text
+Follow instructions in [port_shader.prompt.md](.github/prompts/port_shader.prompt.md).
+```
+
+---
+
+### 最小可运行示例
+
+#### 1) 单 Shader（Widget）
+
+```dart
+SizedBox(
+  height: 240,
+  // shader_asset_main ends with .frag
+  child: ShaderSurface.auto('$shader_asset_main'),
+)
+```
+
+#### 2) 两个 Pass（A → Main）
+
+见 [multi_pass.dart](example/lib/multi_pass.dart)
+
+```dart
+ShaderSurface.builder(() {
+  final bufferA = '$shader_asset_buffera'.shaderBuffer;
+  final main = '$shader_asset_main'.shaderBuffer.feed(bufferA);
+  return [bufferA, main];
+})
+```
+
+#### 3) feedback（A → A → Main）
+
+见 [bricks_game.dart](example/lib/game/bricks_game.dart)
+
+```dart
+ShaderSurface.builder(() {
+  final bufferA = '$asset_shader_buffera'.feedback().feedKeyboard();
+  final mainBuffer = '$asset_shader_main'.feed(bufferA);
+  // Standard scheme: physical width = virtual * 4
+  bufferA.fixedOutputSize = const Size(14 * 4.0, 14);
+  return [bufferA, mainBuffer];
+})
+```
+
 ## 前言
 
 我觉得 Shadertoy 上的着色器非常有趣，有些作品甚至本身就是一个完整的游戏，这让我产生了一个想法：
@@ -104,7 +165,7 @@ ShaderToy 上很多炫酷的效果都是多个着色器和各种输入混合得�
 
 更不可能实现多 Pass + feedback + 循坏依赖 + Filter + Wrap 的完整 Shadertoy 风格。
 
-这是我目前观测到的 shader_graph 所能支持的上限 [expansive reaction-diffusion](https://www.shadertoy.com/view/4dcGW2)
+以这个着色器为例 [expansive reaction-diffusion](https://www.shadertoy.com/view/4dcGW2)
 
 详细的依赖图如下:
 
@@ -134,9 +195,13 @@ A 依赖自身上一帧的输入，C 依赖 A 的上一帧输入，而 A 又依�
 
 > 效果有些微的不一致，也许等 flutter impeller 支持更多的 sampler 特性后，能更好地还原，特别是 texelFetch，filter/wrap 等。
 
-运行的 Gif
+并且我创建了一个 Three.js 的版本，用于对比二者差异
 
-在线预览
+使用 Three.js 版本：<https://nightmare-space.github.io/shader_graph/three.js.html>
+使用 Flutter(ShaderGraph) 版本：<https://nightmare-space.github.io/shader_graph?example=ReactionDiffusion>
+二者对比：<https://nightmare-space.github.io/shader_graph/combined.html>
+
+![Three.js vs ShaderGraph](screenshot/threejs_vs_shader_graph.png)
 
 ---
 
@@ -280,67 +345,6 @@ Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状�
 </table>
 
 ---
-
-## 快速开始
-
-首先需要明确一点：
-
-**Shadertoy 的着色器代码必须经过移植，才能在 Flutter 中运行。**
-
-**并且当前一定要配合项目 example/shaders/common 下的 common_header.frag/main_shadertoy.frag，不然无法实现 Wrap/Filter/texelFetch，如果需要支持 rgba8 feedback，也需要配合 sg_feedback_rgba8.frag**
-
-> example/shaders/common 下文件的位置，我后面会思考一下，让他们看起来更重要一些，而不是在 example 目录下。
-
-项目中提供了辅助移植的 Prompt：`port_shader.prompt.md`
-
-基本流程如下：
-
-1. 打开需要移植的着色器文件（建议直接放在项目中）
-2. 在 Copilot 等 AI 工具中输入对应 Prompt
-
-```text
-Follow instructions in [port_shader.prompt.md](.github/prompts/port_shader.prompt.md).
-```
-
----
-
-### 最小可运行示例
-
-#### 1) 单 Shader（Widget）
-
-```dart
-SizedBox(
-  height: 240,
-  // shader_asset_main ends with .frag
-  child: ShaderSurface.auto('$shader_asset_main'),
-)
-```
-
-#### 2) 两个 Pass（A → Main）
-
-见 [multi_pass.dart](example/lib/multi_pass.dart)
-
-```dart
-ShaderSurface.builder(() {
-  final bufferA = '$shader_asset_buffera'.shaderBuffer;
-  final main = '$shader_asset_main'.shaderBuffer.feed(bufferA);
-  return [bufferA, main];
-})
-```
-
-#### 3) feedback（A → A → Main）
-
-见 [bricks_game.dart](example/lib/game/bricks_game.dart)
-
-```dart
-ShaderSurface.builder(() {
-  final bufferA = '$asset_shader_buffera'.feedback().feedKeyboard();
-  final mainBuffer = '$asset_shader_main'.feed(bufferA);
-  // Standard scheme: physical width = virtual * 4
-  bufferA.fixedOutputSize = const Size(14 * 4.0, 14);
-  return [bufferA, mainBuffer];
-})
-```
 
 ## ShaderBuffer
 

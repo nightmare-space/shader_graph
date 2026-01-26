@@ -25,6 +25,11 @@ English | [中文](README.zh.md)
 - [Shader Graph](#shader-graph)
   - [Topics](#topics)
   - [Roadmap](#roadmap)
+  - [Quick Start](#quick-start)
+    - [Minimal runnable examples](#minimal-runnable-examples)
+      - [1) Single shader (Widget)](#1-single-shader-widget)
+      - [2) Two passes (A → Main)](#2-two-passes-a--main)
+      - [3) feedback (A → A, plus a Main display)](#3-feedback-a--a-plus-a-main-display)
   - [Foreword](#foreword)
     - [`shader_graph` can already support very complex multi-pass scenarios](#shader_graph-can-already-support-very-complex-multi-pass-scenarios)
     - [Float support (RGBA8 feedback) solution](#float-support-rgba8-feedback-solution)
@@ -35,11 +40,6 @@ English | [中文](README.zh.md)
   - [Wrap \& Filter](#wrap--filter)
     - [Keyboard Input](#keyboard-input)
   - [Others](#others)
-  - [Quick Start](#quick-start)
-    - [Minimal runnable examples](#minimal-runnable-examples)
-      - [1) Single shader (Widget)](#1-single-shader-widget)
-      - [2) Two passes (A → Main)](#2-two-passes-a--main)
-      - [3) feedback (A → A, plus a Main display)](#3-feedback-a--a-plus-a-main-display)
   - [ShaderBuffer](#shaderbuffer)
   - [ShaderBuffer.feed](#shaderbufferfeed)
     - [Adding a Widget as input](#adding-a-widget-as-input)
@@ -83,6 +83,63 @@ English | [中文](README.zh.md)
 
 ---
 
+## Quick Start
+
+First, one important point must be clarified:
+
+**Shadertoy shaders must be ported before they can run in Flutter.**
+
+**And currently, you must use the common_header.frag/main_shadertoy.frag in the example/shaders/common directory; otherwise, Wrap/Filter/texelFetch cannot be implemented. If you need to support rgba8 feedback, you also need to use sg_feedback_rgba8.frag.**
+
+This project provides a helper prompt for porting: `port_shader.prompt.md`
+
+The basic workflow is as follows:
+
+1. Open the shader file you want to port (it is recommended to place it directly in your project)
+2. Enter the corresponding prompt in Copilot or other AI tools
+
+```text
+Follow instructions in [port_shader.prompt.md](.github/prompts/port_shader.prompt.md).
+```
+
+### Minimal runnable examples
+
+#### 1) Single shader (Widget)
+
+```dart
+SizedBox(
+  height: 240,
+  // shader_asset_main ends with .frag
+  child: ShaderSurface.auto('$shader_asset_main'),
+)
+```
+
+#### 2) Two passes (A → Main)
+
+See [multi_pass.dart](example/lib/multi_pass.dart)
+
+```dart
+ShaderSurface.builder(() {
+  final bufferA = '$shader_asset_buffera'.shaderBuffer;
+  final main = '$shader_asset_main'.shaderBuffer.feed(bufferA);
+  return [bufferA, main];
+})
+```
+
+#### 3) feedback (A → A, plus a Main display)
+
+See [bricks_game.dart](example/lib/game/bricks_game.dart)
+
+```dart
+ShaderSurface.builder(() {
+  final bufferA = '$asset_shader_buffera'.feedback().feedKeyboard();
+  final mainBuffer = '$asset_shader_main'.feed(bufferA);
+  // Standard scheme: physical width = virtual * 4
+  bufferA.fixedOutputSize = const Size(14 * 4.0, 14);
+  return [bufferA, mainBuffer];
+})
+```
+
 ## Foreword
 
 I found the shaders on Shadertoy extremely interesting. Some of them are essentially complete games, which led me to a question:
@@ -103,7 +160,7 @@ Many of the stunning effects on ShaderToy are produced by mixing multiple shader
 
 It is even more unrealistic to achieve a full ShaderToy-style pipeline with **multi-pass + feedback + cyclic dependencies + filter + wrap**.
 
-This is the current upper bound I’ve observed that `shader_graph` can support:  
+Take this shader as an example:  
 [expansive reaction-diffusion](https://www.shadertoy.com/view/4dcGW2)
 
 The detailed dependency graph is as follows:
@@ -134,8 +191,11 @@ The detailed dependency graph is as follows:
 
 > The visual result is slightly inconsistent. Once Flutter Impeller supports more sampler features, the reproduction quality should improve—especially for `texelFetch`, filter, and wrap behavior.
 
-- Running GIF  
-- Online preview
+Use Three.js version: <https://nightmare-space.github.io/shader_graph/three.js.html>
+Use Flutter(ShaderGraph) version: <https://nightmare-space.github.io/shader_graph?example=ReactionDiffusion>
+Comparison of the two: <https://nightmare-space.github.io/shader_graph/combined.html>
+
+![Three.js vs ShaderGraph](screenshot/threejs_vs_shader_graph.png)
 
 ---
 
@@ -279,63 +339,6 @@ Without support for these features, the visual output differs significantly from
 </table>
 
 ---
-
-## Quick Start
-
-First, one important point must be clarified:
-
-**Shadertoy shaders must be ported before they can run in Flutter.**
-
-**And currently, you must use the common_header.frag/main_shadertoy.frag in the example/shaders/common directory; otherwise, Wrap/Filter/texelFetch cannot be implemented. If you need to support rgba8 feedback, you also need to use sg_feedback_rgba8.frag.**
-
-This project provides a helper prompt for porting: `port_shader.prompt.md`
-
-The basic workflow is as follows:
-
-1. Open the shader file you want to port (it is recommended to place it directly in your project)
-2. Enter the corresponding prompt in Copilot or other AI tools
-
-```text
-Follow instructions in [port_shader.prompt.md](.github/prompts/port_shader.prompt.md).
-```
-
-### Minimal runnable examples
-
-#### 1) Single shader (Widget)
-
-```dart
-SizedBox(
-  height: 240,
-  // shader_asset_main ends with .frag
-  child: ShaderSurface.auto('$shader_asset_main'),
-)
-```
-
-#### 2) Two passes (A → Main)
-
-See [multi_pass.dart](example/lib/multi_pass.dart)
-
-```dart
-ShaderSurface.builder(() {
-  final bufferA = '$shader_asset_buffera'.shaderBuffer;
-  final main = '$shader_asset_main'.shaderBuffer.feed(bufferA);
-  return [bufferA, main];
-})
-```
-
-#### 3) feedback (A → A, plus a Main display)
-
-See [bricks_game.dart](example/lib/game/bricks_game.dart)
-
-```dart
-ShaderSurface.builder(() {
-  final bufferA = '$asset_shader_buffera'.feedback().feedKeyboard();
-  final mainBuffer = '$asset_shader_main'.feed(bufferA);
-  // Standard scheme: physical width = virtual * 4
-  bufferA.fixedOutputSize = const Size(14 * 4.0, 14);
-  return [bufferA, mainBuffer];
-})
-```
 
 ## ShaderBuffer
 
