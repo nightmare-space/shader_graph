@@ -57,7 +57,7 @@ class RenderShaderSurface extends _ShaderSurfaceBase {
   double _time = 0.0;
   int _iFrame = 0;
   double _devicePixelRatio;
-  IMouse _iMouse = IMouse(0.0, 0.0, 0.0, 0.0);
+  IMouse _iMouse = IMouse(0.0, 0.0, -1.0, -1.0);
   void Function(int renderedIFrame)? _onFramePresented;
 
   set onFramePresented(void Function(int renderedIFrame)? v) {
@@ -160,7 +160,7 @@ class ShaderSurfaceLayer extends OffsetLayer {
   double _time = 0.0;
   int _iFrame = 0;
   bool _rendering = false;
-  IMouse _iMouse = IMouse(0.0, 0.0, 0.0, 0.0);
+  IMouse _iMouse = IMouse(0.0, 0.0, -1.0, -1.0);
   ui.Image? _lastImage;
   void Function(int renderedIFrame)? onFramePresented;
 
@@ -189,6 +189,12 @@ class ShaderSurfaceLayer extends OffsetLayer {
   set iFrame(int v) {
     _iFrame = v;
     markNeedsAddToScene();
+  }
+
+  @override
+  void dispose() {
+    _lastPicture?.dispose();
+    super.dispose();
   }
 
   // OffsetLayer.addToScene() ≠ 立即渲染
@@ -240,23 +246,8 @@ class ShaderSurfaceLayer extends OffsetLayer {
       }
     }
 
-    // TODO: Check if the code below is useful
-    // If the image isn't ready yet, keep drawing the last frame to avoid flicker.
     if (img == null) {
-      final last = _lastPicture;
-      if (last != null) {
-        builder.addPicture(offset, last);
-      }
       return;
-    }
-
-    // If the image hasn't changed, reuse the last recorded picture.
-    if (identical(img, _lastImage)) {
-      final last = _lastPicture;
-      if (last != null) {
-        builder.addPicture(offset, last);
-        return;
-      }
     }
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
