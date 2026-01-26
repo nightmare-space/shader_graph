@@ -198,7 +198,9 @@ A 依赖自身上一帧的输入，C 依赖 A 的上一帧输入，而 A 又依�
 并且我创建了一个 Three.js 的版本，用于对比二者差异
 
 使用 Three.js 版本：<https://nightmare-space.github.io/shader_graph/three.js.html>
+
 使用 Flutter(ShaderGraph) 版本：<https://nightmare-space.github.io/shader_graph?example=ReactionDiffusion>
+
 二者对比：<https://nightmare-space.github.io/shader_graph/combined.html>
 
 ![Three.js vs ShaderGraph](screenshot/threejs_vs_shader_graph.png)

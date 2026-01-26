@@ -191,7 +191,9 @@ The detailed dependency graph is as follows:
 > The visual result is slightly inconsistent. Once Flutter Impeller supports more sampler features, the reproduction quality should improve—especially for `texelFetch`, filter, and wrap behavior.
 
 Use Three.js version: <https://nightmare-space.github.io/shader_graph/three.js.html>
+
 Use Flutter(ShaderGraph) version: <https://nightmare-space.github.io/shader_graph?example=ReactionDiffusion>
+
 Comparison of the two: <https://nightmare-space.github.io/shader_graph/combined.html>
 
 ![Three.js vs ShaderGraph](screenshot/threejs_vs_shader_graph.png)
