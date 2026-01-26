@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Shader Graph Comparison</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            background: black;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            gap: 0;
+        }
+
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-right: 1px solid #333;
+        }
+
+        .panel:last-child {
+            border-right: none;
+        }
+
+        .panel-header {
+            padding: 16px;
+            font-weight: 600;
+            font-size: 16px;
+            color: white;
+            background: black;
+            border-bottom: 1px solid #333;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        #canvas-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: black;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .panel {
+                border-right: none;
+                border-bottom: 1px solid #333;
+            }
+
+            .panel:last-child {
+                border-bottom: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="panel">
+            <div class="panel-header">Three.js</div>
+            <div class="panel-content" id="canvas-container">
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">Flutter Shader Graph</div>
+            <div class="panel-content">
+                <iframe src="./index.html?example=ReactionDiffusion" title="Flutter ReactionDiffusion"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 在 main.js 加载前拦截 appendChild
+        const container = document.getElementById('canvas-container');
+        const originalAppendChild = document.body.appendChild;
+
+        document.body.appendChild = function (element) {
+            if (element instanceof HTMLCanvasElement ||
+                (element.tagName === 'DIV' && element.querySelector('canvas'))) {
+                container.appendChild(element);
+                return element;
+            }
+            return originalAppendChild.call(document.body, element);
+        };
+    </script>
+    <script type="module" src="./main.js"></script>
+</body>
+
+</html>
