@@ -148,14 +148,16 @@ class ShaderSurface extends StatefulWidget {
 
 class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProviderStateMixin {
   late final Future<ShaderGraph> _graphFuture = initGraph();
-  late final Ticker _ticker;
+  late final Ticker ticker;
   late ShaderGraph graph = ShaderGraph(widget.buffers);
-  RenderShaderSurface? _renderObject;
-  final FocusNode _focusNode = FocusNode();
-  Duration _elapsed = Duration.zero;
+  // 不能改成 late，因为第一帧还没渲染完之前不能访问它
+  // Can't be made late because it cannot be accessed before the first frame is rendered
+  RenderShaderSurface? renderObject;
+  final FocusNode focusNode = FocusNode();
   late final KeyboardController keyboardController = widget.keyboardController ?? KeyboardController();
   late final ShaderController shaderController = widget.shaderController ?? ShaderController();
 
+  Duration elapsed = Duration.zero;
   // 首帧已经渲染了
   // Whether the first frame has been presented
   bool firstFramePresented = false;
@@ -175,6 +177,7 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
     return inputs;
   }
 
+  // Provide hot reload can continue ticking
   @override
   void reassemble() {
     super.reassemble();
@@ -194,7 +197,7 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
         }
       }
     }
-    _ticker = createTicker((elapsed) {
+    ticker = createTicker((elapsed) {
       // 这里之前踩了了一个坑，由于 toImageSync 在 3.38.5 上仍然内存泄露
       // 在 Mac 上，运行一会会吃掉所有的物理 Ram，然后吃完所有的 Swap，最终占用内存几乎是磁盘上限
       // 在我的测试中是 200Gb，所以改成了异步的 toImage()。但又不能让每一帧都触发更新
@@ -206,31 +209,31 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
       // So I switched to the async toImage(). But we can't trigger updates every frame,
       // so the Ticker only triggers updates when a new frame is ready.
       // https://github.com/flutter/flutter/issues/138627
-      _elapsed = elapsed;
+      this.elapsed = elapsed;
       if (canTick && !shaderController.isPaused) {
-        _renderObject?.time = _elapsed.inMicroseconds / 1e6;
+        renderObject?.time = this.elapsed.inMicroseconds / 1e6;
         // Schedule the next logical frame number for shaders.
-        _renderObject?.iFrame = (_renderObject?.iFrame ?? 0) + 1;
+        renderObject?.iFrame = (renderObject?.iFrame ?? 0) + 1;
         canTick = false;
       }
     });
-    _ticker.start();
+    ticker.start();
     keyboardController.init();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _focusNode.requestFocus();
+      if (mounted) focusNode.requestFocus();
     });
   }
 
   @override
   void dispose() {
-    _ticker.dispose();
-    _focusNode.dispose();
+    ticker.dispose();
+    focusNode.dispose();
     graph.dispose();
     keyboardController.dispose();
     super.dispose();
   }
 
-  void _onFramePresented(int renderedIFrame) {
+  void onFramePresented(int renderedIFrame) {
     // log('Frame $renderedIFrame presented');
     if (!firstFramePresented) firstFramePresented = true;
     canTick = true;
@@ -268,12 +271,12 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
 
   Focus buildFocusView() {
     return Focus(
-      focusNode: _focusNode,
+      focusNode: focusNode,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
           keyboardController.onKeyDown(event);
         } else if (event is KeyUpEvent) {
-          keyboardController.onKeyUp(event, _renderObject?.iFrame ?? 0);
+          keyboardController.onKeyUp(event, renderObject?.iFrame ?? 0);
         }
         return KeyEventResult.handled;
       },
@@ -283,22 +286,22 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
         return Listener(
           onPointerMove: (event) {
             final localPos = box().globalToLocal(event.position);
-            final ro = _renderObject;
+            final ro = renderObject;
             ro?.iMouse = ro.iMouse.copyWith(x: localPos.dx, y: localPos.dy);
           },
           onPointerDown: (event) {
-            _focusNode.requestFocus();
+            focusNode.requestFocus();
             final localPos = box().globalToLocal(event.position);
-            _renderObject?.iMouse = IMouse(localPos.dx, localPos.dy, localPos.dx, localPos.dy);
+            renderObject?.iMouse = IMouse(localPos.dx, localPos.dy, localPos.dx, localPos.dy);
           },
           onPointerUp: (event) {
             final localPos = box().globalToLocal(event.position);
-            final ro = _renderObject;
+            final ro = renderObject;
             ro?.iMouse = ro.iMouse.copyWith(
               x: localPos.dx,
               y: localPos.dy,
-              z: 0.0,
-              w: 0.0,
+              z: -1.0,
+              w: -1.0,
             );
           },
           behavior: HitTestBehavior.translucent,
@@ -307,11 +310,11 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
               graph: graph,
               dpr: MediaQuery.devicePixelRatioOf(context),
               onRenderObjectCreated: (ro) {
-                _renderObject = ro;
+                renderObject = ro;
                 // Start at frame 0; subsequent frames advance only when a render completes.
                 ro.iFrame = 0;
               },
-              onFramePresented: _onFramePresented,
+              onFramePresented: onFramePresented,
               children: [
                 for (final input in widgetInputs)
                   SnapshotSampler(
