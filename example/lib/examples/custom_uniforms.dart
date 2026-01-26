@@ -1,21 +1,21 @@
 import 'package:flutter/cupertino.dart';
 import 'package:shader_graph/shader_graph.dart';
 
-class CustomUniforms extends StatefulWidget {
-  const CustomUniforms({super.key});
+class CustomUniformsExample extends StatefulWidget {
+  const CustomUniformsExample({super.key});
 
   @override
-  State<CustomUniforms> createState() => _CustomUniformsState();
+  State<CustomUniformsExample> createState() => _CustomUniformsExampleState();
 }
 
-class _CustomUniformsState extends State<CustomUniforms> with TickerProviderStateMixin {
+class _CustomUniformsExampleState extends State<CustomUniformsExample> with TickerProviderStateMixin {
   final buffer = 'shaders/touch_simple.frag'.shaderBuffer;
-  late AnimationController controller = AnimationController(
+  late AnimationController liftController = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 100),
   );
 
-  late AnimationController controller2 = AnimationController(
+  late AnimationController swapController = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 2000),
   );
@@ -26,19 +26,19 @@ class _CustomUniformsState extends State<CustomUniforms> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    controller.addListener(() {
-      buffer.setUniform(0, controller.value * 1.2);
+    liftController.addListener(() {
+      buffer.setUniform(0, liftController.value * 1.2);
     });
 
-    controller2.addListener(() {
-      buffer.setUniform(4, controller2.value);
+    swapController.addListener(() {
+      buffer.setUniform(4, swapController.value);
     });
-    controller2.repeat();
+    swapController.repeat();
 
     // uniforms (match example/shaders/touch_simple.frag)
     buffer.setUniform(0, 0.0); // liftStrength
-    buffer.setUniform(1, 0.2); // liftRadius
-    buffer.setUniform(2, 24.0); // pointsPerRow
+    buffer.setUniform(1, 0.4); // liftRadius
+    buffer.setUniform(2, 48.0); // pointsPerRow
     buffer.setUniform(3, 0.2); // baseDotOpacity
     buffer.setUniform(4, 0.0); // swapProgress
 
@@ -81,7 +81,7 @@ class _CustomUniformsState extends State<CustomUniforms> with TickerProviderStat
             final box = innerContext.findRenderObject() as RenderBox;
             final localPos = box.globalToLocal(event.position);
             activeTouches[event.pointer] = localPos;
-            controller.forward();
+            liftController.forward();
             _syncTouchesToShader(box);
           },
           onPointerUp: (event) {
@@ -89,12 +89,12 @@ class _CustomUniformsState extends State<CustomUniforms> with TickerProviderStat
             activeTouches.remove(event.pointer);
 
             if (activeTouches.isEmpty) {
-              controller.reverse();
+              liftController.reverse();
 
               // 等回落动画完成后再清空触点，避免 liftFalloff 瞬间归零
               Future.delayed(const Duration(milliseconds: 150), () {
                 if (!mounted) return;
-                if (controller.status == AnimationStatus.dismissed) {
+                if (liftController.status == AnimationStatus.dismissed) {
                   _syncTouchesToShader(box);
                 }
               });
@@ -111,8 +111,8 @@ class _CustomUniformsState extends State<CustomUniforms> with TickerProviderStat
 
   @override
   void dispose() {
-    controller.dispose();
-    controller2.dispose();
+    liftController.dispose();
+    swapController.dispose();
     super.dispose();
   }
 }

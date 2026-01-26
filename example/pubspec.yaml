@@ -28,8 +28,8 @@ flutter:
     - assets/textures/
   shaders:
     - shaders/frame/IFrame Test.frag
-    - shaders/mouse/IMouse Test.frag
-    - shaders/mouse/Noise Lab (3D).frag
+    - shaders/mouse/Pentagonal Conway's game BufferA.frag
+    - shaders/mouse/Pentagonal Conway's game.frag
     # keyboard
     - shaders/keyboard/Keyboard Debug Overlay.frag
     - shaders/keyboard/Keyboard Test.frag

@@ -3,14 +3,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'examples/custom_uniforms.dart';
 import 'examples/game.dart';
 import 'examples/animation_control.dart';
 import 'examples/float.dart';
-import 'examples/keyboard_input.dart';
-import 'examples/mouse_input.dart';
 import 'examples/multi_pass.dart';
+import 'examples/shader_input.dart' hide ReactionDiffusionView;
 import 'examples/text_render.dart';
-import 'examples/widget_input.dart';
 import 'examples/wrap.dart';
 
 double narrowWidthThreshold = 600;
@@ -29,10 +28,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return CupertinoApp(
       title: 'Shader Graph Example',
-      // theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
       theme: const CupertinoThemeData(
         brightness: Brightness.light,
-        primaryColor: Color(0xff006aff),
+        primaryColor: Colors.deepPurple,
       ),
       onGenerateRoute: (settings) {
         String? shaderParam;
@@ -50,7 +48,6 @@ class MyApp extends StatelessWidget {
           }
         }
 
-        // 默认显示画廊首页
         return CupertinoPageRoute(
           builder: (context) => const RootPage(),
           settings: settings,
@@ -74,13 +71,12 @@ class _RootPageState extends State<RootPage> {
   Widget build(BuildContext context) {
     final tabTitles = [
       'Game',
-      'Widget Input',
-      'Keyboard Input',
-      'Mouse Input',
+      'Shader Input',
       'Wrap & Filter',
       'Text Render',
       'Animation Controller',
       'Multi-Pass',
+      'Custom Uniforms',
       'Float Support',
     ];
 
@@ -108,13 +104,12 @@ class _RootPageState extends State<RootPage> {
       child: SafeArea(
         child: [
           GameExample(),
-          WidgetInputExample(),
-          KeyboardExample(),
-          MouseExample(),
+          ShaderInputExample(),
           WrapExample(),
           TextRenderExample(),
           AnimationControlExample(),
           MultiPassExample(),
+          CustomUniformsExample(),
           FloatExample(),
         ][currentIndex],
       ),
