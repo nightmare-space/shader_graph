@@ -31,7 +31,7 @@
       - [2) 两个 Pass（A → Main）](#2-两个-passa--main)
       - [3) feedback（A → A → Main）](#3-feedbacka--a--main)
   - [前言](#前言)
-    - [shader\_graph 已经能支持很复杂的多 Pass 场景](#shader_graph-已经能支持很复杂的多-pass-场景)
+    - [`shader_graph` 已经能支持很复杂的多 Pass 场景](#shader_graph-已经能支持很复杂的多-pass-场景)
     - [Float 支持（RGBA8 feedback）方案](#float-支持rgba8-feedback方案)
     - [texelFetch 支持](#texelfetch-支持)
   - [示例](#示例)
@@ -159,13 +159,13 @@ ShaderSurface.builder(() {
 
 因此，`shader_graph` 诞生了。
 
-### shader_graph 已经能支持很复杂的多 Pass 场景
+### `shader_graph` 已经能支持很复杂的多 Pass 场景
 
 ShaderToy 上很多炫酷的效果都是多个着色器和各种输入混合得到的结果，大部分的现有的 flutter 渲染 shader 的方案，基本都是单 Pass 的，很难实现这样的多 pass 反馈场景。
 
 更不可能实现多 Pass + feedback + 循坏依赖 + Filter + Wrap 的完整 Shadertoy 风格。
 
-以这个着色器为例 [expansive reaction-diffusion](https://www.shadertoy.com/view/4dcGW2)
+以这个着色器为例：[expansive reaction-diffusion](https://www.shadertoy.com/view/4dcGW2)
 
 详细的依赖图如下:
 

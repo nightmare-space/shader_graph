@@ -160,8 +160,7 @@ Many of the stunning effects on ShaderToy are produced by mixing multiple shader
 
 It is even more unrealistic to achieve a full ShaderToy-style pipeline with **multi-pass + feedback + cyclic dependencies + filter + wrap**.
 
-Take this shader as an example:  
-[expansive reaction-diffusion](https://www.shadertoy.com/view/4dcGW2)
+Take this shader as an example: [expansive reaction-diffusion](https://www.shadertoy.com/view/4dcGW2)
 
 The detailed dependency graph is as follows:
 
