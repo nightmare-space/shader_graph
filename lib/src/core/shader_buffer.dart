@@ -7,7 +7,10 @@ class ShaderBuffer extends ChangeNotifier {
     this.name,
     this.fixedOutputSize,
   });
-// 存储：key = 逻辑槽位，value = 任意类型值
+
+  /// 自定义 uniform 变量，以原始着色器的顺序为准，内部会根据默认 Uniforms 之后的 slot 索引进行设置
+  ///
+  /// Custom uniform variables, following the order of the original shader.
   final Map<int, dynamic> _customUniforms = {};
 
   /// 着色器资源路径，不知道 Flutter 什么时候可以支持用 File 对象加载着色器
@@ -25,13 +28,22 @@ class ShaderBuffer extends ChangeNotifier {
   /// 与 widget 大小 / devicePixelRatio / [scale] 无关。
   /// 这对于 Shadertoy 风格的数据 buffer（例如 14x14）以及
   /// 将虚拟像素扩展到多个物理像素的布局非常有用。
-
+  ///
   /// When set, the shader output is rendered to this exact pixel size,
   /// independent of the widget size / devicePixelRatio / [scale].
   /// This is useful for Shadertoy-style data buffers (e.g. 14x14) and
   /// for layouts that expand virtual texels into multiple physical pixels.
   Size? fixedOutputSize;
 
+  /// 控制 iResolution（以及 iMouse）的坐标空间。
+  ///
+  /// 默认（false）：iResolution 与实际渲染目标尺寸匹配
+  /// （如果设置了 fixedOutputSize 则为其值，否则为表面尺寸）。
+  ///
+  /// 当为 true 时：即使渲染到一个很小的 fixedOutputSize
+  /// （Shadertoy 风格的数据 buffer 常见），也保持 iResolution 在表面像素空间
+  /// （data.logicalSize * data.dpr * scale）。
+  ///
   /// Controls the coordinate space of `iResolution` (and consequently `iMouse`).
   ///
   /// Default (`false`): `iResolution` matches the actual render target size
@@ -236,6 +248,9 @@ class ShaderBuffer extends ChangeNotifier {
     // prevOutput 的推进由 ShaderGraph 在“每帧开始”统一调用 beginFrame() 处理，
     // 从而保证 usePreviousFrame 语义稳定（=上一帧）且与 buffer 执行顺序无关。
     // 这里保留旧逻辑（注释）便于对照/回滚：
+    // Avoid advancing prevOutput here; it's handled uniformly by ShaderGraph
+    // at the "beginning of each frame", ensuring stable semantics for
+    // usePreviousFrame (= previous frame) regardless of buffer execution order.
     // _prevOutput?.dispose();
     // _prevOutput = _output;
 
@@ -283,6 +298,9 @@ class ShaderBuffer extends ChangeNotifier {
     // prevOutput 的推进由 ShaderGraph 在“每帧开始”统一调用 beginFrame() 处理，
     // 从而保证 usePreviousFrame 语义稳定（=上一帧）且与 buffer 执行顺序无关。
     // 这里保留旧逻辑（注释）便于对照/回滚：
+    // Avoid advancing prevOutput here; it's handled uniformly by ShaderGraph
+    // at the "beginning of each frame", ensuring stable semantics for
+    // usePreviousFrame (= previous frame) regardless of buffer execution order.
     // _prevOutput?.dispose();
     // _prevOutput = _output;
     _output = img;
@@ -400,10 +418,10 @@ class ShaderBuffer extends ChangeNotifier {
         offset += 2;
       } else if (value is Color) {
         _shader!
-          ..setFloat(offset, value.r / 0xff)
-          ..setFloat(offset + 1, value.g / 0xff)
-          ..setFloat(offset + 2, value.b / 0xff)
-          ..setFloat(offset + 3, value.a / 0xff);
+          ..setFloat(offset, value.r)
+          ..setFloat(offset + 1, value.g)
+          ..setFloat(offset + 2, value.b)
+          ..setFloat(offset + 3, value.a);
         offset += 4;
       } else if (value is List<double>) {
         for (int i = 0; i < value.length; i++) {
