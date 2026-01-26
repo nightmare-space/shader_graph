@@ -1,91 +1,91 @@
-**【ShaderToy → Flutter RuntimeEffect 迁移 Prompt（sg_feedback_rgba8 标准）】**
+---
+name: shaderMigrationAssistantFloat
+description: Add float-safe RGBA8 feedback rules on top of the general Flutter/SkSL porting rules
+---
 
-目标：把一个 Shadertoy multipass shader（含 BufferA/BufferB/Main）移植到 Flutter `FragmentProgram/RuntimeEffect`，并支持 feedback（上一帧）在 RGBA8 `ui.Image` 中稳定工作，避免 float 精度丢失与读写冲突。  
-约束：不使用位运算/bitcast（`>> & | ^`, `floatBitsToUint` 等），不依赖 `texelFetch`；避免使用 alpha 存数据（可能预乘）。
+**【ShaderToy → Flutter RuntimeEffect 迁移 Prompt（float + sg_feedback_rgba8 增量规范）】**
 
-### 1) 通用约束（必须遵守）
-- 所有 pass 顶部必须先 `#include <../common/common_header.frag>`；每个 pass 显式声明 `uniform sampler2D iChannelN;`
-- 如果该 pass 需要 RGBA8 feedback（sg_feedback_rgba8），则在 common_header 之后紧接着：
-  - `#include <../common/sg_feedback_rgba8.frag>`
-  - 注意 include 顺序：`sg_feedback_rgba8.frag` 依赖 `common_header.frag` 提供的 `SG_TEXELFETCH`，因此必须先 include common_header。
-- 禁止：全局 `const int[] = int[](...)` 数组初始化（SkSL 易炸）；用 getter 函数 if-chain 替代
-- 禁止：位运算与整数 `%`；用 `mod/floor/pow` 等 float 算术替代
-- 采样替换（优先）：`texelFetch(tex, ivec2(x,y), 0)` → `SG_TEXELFETCH(tex, ivec2(x,y), sizePx)`
-  - **优先（方案A，已内置通道分辨率）**：如果采样的是 `iChannel0..3`，直接用：
-    - `texelFetch(iChannel0, ivec2(x,y), 0)` → `SG_TEXELFETCH0(ivec2(x,y))`
-    - `texelFetch(iChannel1, ivec2(x,y), 0)` → `SG_TEXELFETCH1(ivec2(x,y))`
-    - `texelFetch(iChannel2, ivec2(x,y), 0)` → `SG_TEXELFETCH2(ivec2(x,y))`
-    - `texelFetch(iChannel3, ivec2(x,y), 0)` → `SG_TEXELFETCH3(ivec2(x,y))`
-    - 上述宏会使用 `common_header.frag` 中的 `iChannelResolution0..3`（由 Dart 侧自动填充）
-  - **兜底（通用宏）**：`SG_TEXELFETCH(tex, ivec2(x,y), sizePx)`
-    - 其中 `sizePx` 是纹理像素尺寸（vec2），可用 `iChannelResolutionN`（例如 `iChannelResolution0`）或你已有的 `bufferSize` / `VSIZE_PHYS` 等
-  - 若当前文件无法使用 `SG_TEXELFETCH`，退化为：`texture(tex, (vec2(x,y)+0.5)/sizePx)`
-- 所有临时变量尽量显式初始化（SkSL 对未初始化更敏感）
-- 数据 buffer 禁用 `discard`（用写默认值/return 代替）
+你要做的是“在 Flutter/SkSL 可编译”的前提下，把 Shadertoy 的 multipass（BufferA/BufferB/Main）移植为可运行的 shader graph，并且让**需要跨帧保存的 float 状态**在 RGBA8 `ui.Image` 中稳定工作。
 
-> 反馈（feedback）特别注意：一旦产生 `NaN/Inf`，会被写入 RGBA8 反馈并在后续帧“永久扩散/污染”，导致画面分叉、闪烁、逻辑崩坏。
-> - 避免除以 0：对 `1/x`、`normalize(v)`、`inversesqrt(dot(v,v))` 等要做最小阈值保护
-> - 避免分支里未初始化的变量路径
-> - 避免 `texture` 线性采样导致的跨 lane 串扰（见第 2/4 节的写入策略）
+## 0) 与通用 Prompt 的关系（先做什么）
+1) **先按通用规则处理每个 pass**：遵循 [port_shader.prompt.md](.github/prompts/port_shader.prompt.md) 的结构/采样/变量初始化/SkSL 兼容性要求（include 顺序、`SG_TEX0..3`、移除自定义 main、底部 `main_shadertoy.frag` 等）。
+2) **然后再按本文件补充“float 状态 + feedback”规则**：仅对“需要保存/读取上一帧状态”的 buffer 做 RGBA8 编码读写改造。
 
-### 2) RGBA8 feedback 数据编码（sg_feedback_rgba8）
-- 数据 buffer 不能直接存 float；必须用 sg_feedback_rgba8 方案编码：
-  - 标量 $v \in [-1,1]$ → RGB(24-bit) 打包，A 固定 1
-  - “一个虚拟 texel = vec4” 的语义用横向 lane 展开：
-    - virtual texel `(x,y)` 对应 physical 像素 `(x*4+lane, y)`，lane=0..3 分别存 vec4 的 x/y/z/w
-  - 物理输出尺寸 = `(virtualWidth*4, virtualHeight)`（Dart 侧 `fixedOutputSize` 必须匹配）
-- 使用 API：
-  - 读（必须显式通道 token，使用宏）：
-    - `SG_LOAD_VEC4(iChannel0, vpos, VSIZE)`
-    - `SG_LOAD_FLOAT(iChannel0, vpos, VSIZE)`
-    - `SG_LOAD_VEC2/SG_LOAD_VEC3(...)` 同理
-  - 写：`sg_storeVec4(re, va, fragColor, p)` / `sg_storeVec4Range(reRect, va, fragColor, p)`
-  - 范围映射：`sg_encodeRangeToSigned/sg_decodeSignedToRange`（用于 points/time 等不在 [-1,1] 的值）
+> 本 prompt 只讲“如何让 float feedback 在 RGBA8 下可靠”，避免重复通用迁移细节。
 
-> 注意：不要再使用旧的 `sg_load*`/`sg_fetchRaw` 读取函数，也不要假设默认通道（例如默认 iChannel0）。
+## 1) 何时必须启用 sg_feedback_rgba8
+当满足任一条件时：
+- 该 pass 需要读取**上一帧**的 Buffer 输出（feedback/self feedback/ping-pong）；或
+- 该 pass 输出被下游当作“数据纹理/状态寄存器”使用（而不是纯颜色画面）。
 
-> 线性采样与 lane 串扰（重要）：Flutter 的 `sampler2D` 在部分平台/路径上可能是线性采样，
-> 导致相邻 physical 像素（lane 0..3）发生轻微混合，从而污染“虚拟 texel 的 vec4”。
-> - 对“只用到一个标量通道”的寄存器：建议写入时把标量复制到 `xyzw` 四个 lane（例如 `vec4(v,v,v,v)`）
-> - 对应读取时：建议先 `vec4 raw = SG_LOAD_VEC4(iChannel0, vpos, VSIZE);` 再用 `dot(raw, vec4(0.25))` 取平均，进一步降低偶发 lane 混合造成的抖动
+则该 pass 在 `common_header.frag` 之后必须紧接：
+```glsl
+#include <../common/sg_feedback_rgba8.frag>
+```
 
-### 3) 反馈链路（避免读写冲突）
-- 标准链路：
-  - `BufferA`：读取上一帧 feedback（iChannel0），更新状态并输出
-  - `BufferB`：passthrough（仅复制 BufferA 输出）用于避免某些平台读写冲突
-  - `Main`：只读取 BufferB 输出渲染
-- 如果出现“状态分叉/闪烁”，优先把反馈改成 ping-pong：`A <- B(prev)`，`B <- A(curr)`，Main 读 B
+并且：
+- **禁止**把 float 直接写进 `fragColor`（RGBA8 会量化/丢精度/引发不稳定）
+- 必须使用本方案提供的 `SG_LOAD_*` 读取 + `sg_store*` 写入
+- 避免用 alpha 存数据（可能被预乘/混色）
 
-### 4) Dart 侧接线要求
-- 对所有数据 buffer 设置 `fixedOutputSize` 为物理尺寸（例如 `Size(VSIZE.x*4, VSIZE.y)`）
+## 2) RGBA8 编码语义（必须理解并按此实现）
+### 2.1 “虚拟 texel = vec4”的 lane 展开
+- 虚拟坐标 `vpos = ivec2(x, y)`
+- 对应的物理像素横向展开为 4 个 lane：`(x*4 + lane, y)`，`lane=0..3` 分别存 vec4 的 x/y/z/w
+- 因此物理输出尺寸必须是：
+  $$\text{physWidth} = \text{virtualWidth} * 4,\quad \text{physHeight} = \text{virtualHeight}$$
 
-#### 4.1 `iResolution/iMouse` 的两种语义（必须二选一，且 shader 逻辑要匹配）
+### 2.2 读写 API（强制）
+读取（必须显式传 sampler + 虚拟尺寸 token）：
+- `vec4 s = SG_LOAD_VEC4(iChannel0, vpos, VSIZE);`
+- `float f = SG_LOAD_FLOAT(iChannel0, vpos, VSIZE);`
+- `vec2/vec3` 用 `SG_LOAD_VEC2/SG_LOAD_VEC3`
 
-**A) Buffer-space 语义（默认）**
-- `iResolution`/`iMouse` 以当前 buffer 的渲染目标尺寸为准（即 `fixedOutputSize`）
-- 适用：纯“状态网格/数据纹理”逻辑（例如 14x14 的 gameplay grid），只需要修正横向 pack（`/4`）
-- shader 内如需按 Shadertoy 虚拟坐标计算：要自行把 `iMouse/iResolution` 从 physical（pack 后）还原为 virtual
+写入（用 sg_feedback_rgba8 的 store，把“虚拟坐标”的数据写回当前像素）：
+- `sg_storeVec4(re, va, fragColor, p);`
+- 范围写入：`sg_storeVec4Range(reRect, va, fragColor, p);`
 
-**B) Surface-space 语义（屏幕语义）**
-- 当原始 Shadertoy shader 在 BufferA 就直接用屏幕语义（例如 `M=(2*iMouse-iResolution)/iResolution.y` 参与物理/交互）时，
-  BufferA 虽然渲染到 tiny `fixedOutputSize`，但仍需要拿到“屏幕尺寸/屏幕鼠标”。
-- 做法：Dart 侧对该 buffer 打开 `useSurfaceSizeForIResolution = true`（或等价机制），让引擎用 surface 尺寸填充 `iResolution/iMouse`
-- 注意：启用后，shader 内不要再用 `packX = iResolution.x / VSIZE.x` 这类“从 iResolution 反推 pack 比例”的代码；
-  因为此时 `iResolution` 已不等于 buffer 的物理输出尺寸。
+范围映射（当原数据不在 [-1,1]）：
+- 写入前用 `sg_encodeRangeToSigned(x, minV, maxV)`
+- 读取后用 `sg_decodeSignedToRange(x, minV, maxV)`
 
-> 结论：
-> - 像 Bricks 这类 gameplay grid：推荐 A（buffer-space）+ 手动 `/4` 修正
-> - 像 Couch 2048 这类在 BufferA 直接用屏幕语义选取/施力：推荐 B（surface-space）
+## 3) 线性采样导致 lane 串扰（必须按情况处理）
+Flutter 的 `sampler2D` 在部分平台可能线性采样，导致相邻 lane 轻微混合，从而污染“vec4 寄存器”。
 
-#### 4.2 时间步长
-- Shadertoy 常用 `iTimeDelta`；Flutter/RuntimeEffect 未必提供同等精度/含义。
-- 若 shader 依赖固定步长：可在 shader 内用常量 `dt = 1.0/60.0`（或由引擎提供 `iTimeDelta`）实现最小改动。
+当某个寄存器**本质只存一个标量**（例如计时器、分数、状态标志）：
+- 写入建议：把标量复制到 `xyzw`（`vec4(v, v, v, v)`），降低 lane 混合影响
+- 读取建议：先 `vec4 raw = SG_LOAD_VEC4(...);` 再 `float v = dot(raw, vec4(0.25));` 取平均，进一步减抖
 
-### 5) 迁移交付要求
-- 保持原 shader 结构与变量名尽量不变（最小改动）
-- 给出修改后的：
-  - `BufferA.frag`（状态读写替换为 `SG_LOAD_*` / `sg_store*`）
-  - `BufferB.frag`（passthrough）
-  - `Main.frag`（读取解码后的状态渲染）
-  - Dart 接线（buffers + fixedOutputSize + feedback/pingpong）
-- 若遇到编译错误：按“数组/位运算/texelFetch/未初始化”四类逐项最小修复，不引入额外功能
+## 4) 反馈链路（读写冲突的标准解法）
+优先采用以下结构来避免某些后端读写冲突：
+1) BufferA：读上一帧（iChannel0）→ 更新状态 → 写出（RGBA8 编码）
+2) BufferB：passthrough（复制 A 输出）
+3) Main：只读 BufferB 渲染
+
+如果出现“状态分叉/闪烁”：把 feedback 改成 ping-pong：
+- A 读 B(prev)，写 A(curr)
+- B 读 A(curr)，写 B(curr)
+- Main 读 B
+
+## 5) Dart 侧接线（你必须明确告知怎么做）
+你输出的迁移结果必须包含一段 Dart 接线说明，至少写清：
+- 每个数据 buffer 的 `fixedOutputSize` 设置为**物理尺寸**：`Size(VSIZE.x*4, VSIZE.y)`
+- 哪个 buffer 调用 `.feedback()`（或采用 ping-pong 时 A/B 如何互 feed）
+- Main 读取哪个 buffer
+
+并明确选择 `iResolution/iMouse` 的语义：
+- **Buffer-space（默认）**：`iResolution`/`iMouse` 等于当前 buffer 渲染目标（即 fixedOutputSize）。如果 shader 用虚拟格子坐标，需要在 shader 内把 x 方向 `/4` 还原。
+- **Surface-space**：当 BufferA 需要屏幕语义做交互/物理时，Dart 侧对该 buffer 打开 `useSurfaceSizeForIResolution = true`。
+
+## 6) 稳定性红线（避免把坏数据写进反馈）
+一旦 `NaN/Inf` 写入 RGBA8 feedback，会在后续帧扩散导致闪烁/逻辑崩坏。
+- 对 `1/x`、`normalize`、`inversesqrt(dot(v,v))` 等，必须加最小阈值保护，避免除以 0
+- 所有临时变量/分支路径必须显式初始化
+
+## 7) 交付清单（你输出必须包含）
+- 修改后的 `BufferA.frag`：使用 `SG_LOAD_*` + `sg_store*` 完成状态读写
+- `BufferB.frag`：passthrough（或 ping-pong 的 B）
+- `Main.frag`：只读最终状态纹理渲染（必要时解码/平均 lane）
+- Dart 侧 buffers 连接示例（含 `fixedOutputSize`、feedback/ping-pong、Main 读取）
+
+> 遇到编译错误时：遵循通用 prompt 的“四类最小修复策略”（数组/位运算/texelFetch/未初始化），不要引入额外功能。
