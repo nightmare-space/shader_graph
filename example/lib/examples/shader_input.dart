@@ -125,17 +125,10 @@ class _ShaderInputExampleState extends State<ShaderInputExample> {
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             Expanded(
-              child: Stack(
-                children: [
-                  Container(
-                    color: Colors.red,
-                  ),
-                  WidgetInputTest(
-                    child: SizedBox.expand(
-                      child: imageWidget,
-                    ),
-                  ),
-                ],
+              child: WidgetInputTest(
+                child: SizedBox.expand(
+                  child: imageWidget,
+                ),
               ),
             ),
           ],
