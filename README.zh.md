@@ -38,7 +38,7 @@
     - [示例截图](#示例截图)
     - [Ping-Pong \& Multi-Pass \& RGBA8 Feedback](#ping-pong--multi-pass--rgba8-feedback)
     - [Wrap \& Filter](#wrap--filter)
-    - [键盘输入](#键盘输入)
+    - [Keyboard \& Mouse \& Widget Input](#keyboard--mouse--widget-input)
     - [其他](#其他)
   - [ShaderBuffer](#shaderbuffer)
   - [ShaderBuffer.feed](#shaderbufferfeed)
@@ -203,7 +203,7 @@ A 依赖自身上一帧的输入，C 依赖 A 的上一帧输入，而 A 又依�
 
 二者对比：<https://nightmare-space.github.io/shader_graph/combined.html>
 
-![Three.js vs ShaderGraph](screenshot/threejs_vs_shader_graph.png)
+![Three.js vs ShaderGraph](screenshot/multi-pass/ThreeJs%20VS%20Shader%20Graph.png)
 
 ---
 
@@ -251,12 +251,12 @@ Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状�
 <table>
   <tr>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/game/Bricks%20Game.png?raw=true">
       <br>
       Bricks Game
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Pacman%20Game.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/game/Pacman%20Game.png?raw=true">
       <br>
       Pacman Game
     </td>
@@ -272,17 +272,17 @@ Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状�
 <table>
   <tr>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Raw Image.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Mode.png?raw=true">
       <br>
       Raw Image
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Transition%20Burning.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Transition%20Burning.png?raw=true">
       <br>
       Transition Burning
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Tissue.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Tissue.png?raw=true">
       <br>
       Tissue
     </td>
@@ -292,54 +292,72 @@ Flutter 的 feedback 纹理通常为 RGBA8，无法稳定存储任意 float 状�
 <table>
   <tr>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Black%20Hole.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Black%20Hole.png?raw=true">
       <br>
       Black Hole
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Broken%20Time%20Gate.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Broken%20Time%20Gate.png?raw=true">
       <br>
       Broken Time Gate
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Goodbye%20Dream%20Clouds.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Goodbye%20Dream%20Clouds.png?raw=true">
       <br>
       Goodbye Dream Clouds
     </td>
   </tr>
 </table>
 
-### 键盘输入
+### Keyboard & Mouse & Widget Input
 
-> 注意：这些画面并非 Flutter UI，而是完全由着色器渲染，并且可以实时响应键盘输入
+> 注意：Keyboard Input 并非 Flutter UI，而是完全由着色器渲染，并且可以实时响应键盘输入
 
-<img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Keyboard.png?raw=true">
+<table>
+  <tr>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Keyboard%20Input.png?raw=true">
+      <br>
+      Keyboard Input
+    </td>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Mouse%20Input.png?raw=true">
+      <br>
+      Mouse Input
+    </td>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Widget%20Input.png?raw=true">
+      <br>
+      Widget Input
+    </td>
+  </tr>
+</table>
 
 ### 其他
 
 <table>
   <tr>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/IFrame.png?raw=true">
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/Custom%20Uniforms.png?raw=true">
       <br>
-      IFrame
+      Custom Uniforms
     </td>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Noise%20Lab.png?raw=true">
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/IFrame.png?raw=true">
       <br>
-      Noise Lab
+      IFrame
     </td>
     <td>
     </td>
   </tr>
   <tr>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Text.png?raw=true">
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/Text%20Render.png?raw=true">
       <br>
-      Text
+      Text Render
     </td>
     <td>
-      <img width="300px" src="https://raw.githubusercontent.com/nightmare-space/shader_graph/main/screenshot/Float%20Test.png">
+      <img width="300px" src="https://raw.githubusercontent.com/nightmare-space/shader_graph/main/screenshot/other/Float%20Test.png">
       <br>
       Float Test
     </td>

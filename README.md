@@ -38,7 +38,7 @@ English | [中文](README.zh.md)
     - [Example Screenshots](#example-screenshots)
   - [Ping-Pong \& Multi-Pass \& RGBA8 Feedback](#ping-pong--multi-pass--rgba8-feedback)
   - [Wrap \& Filter](#wrap--filter)
-    - [Keyboard Input](#keyboard-input)
+    - [Keyboard \& Mouse \& Widget Input](#keyboard--mouse--widget-input)
   - [Others](#others)
   - [ShaderBuffer](#shaderbuffer)
   - [ShaderBuffer.feed](#shaderbufferfeed)
@@ -196,7 +196,7 @@ Use Flutter(ShaderGraph) version: <https://nightmare-space.github.io/shader_grap
 
 Comparison of the two: <https://nightmare-space.github.io/shader_graph/combined.html>
 
-![Three.js vs ShaderGraph](screenshot/threejs_vs_shader_graph.png)
+![Three.js vs ShaderGraph](screenshot/multi-pass/ThreeJs%20VS%20Shader%20Graph.png)
 
 ---
 
@@ -244,16 +244,15 @@ You can visit the online demos to experience the power of shaders and see what k
 <table>
   <tr>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/game/Bricks%20Game.png?raw=true">
       <br>
       Bricks Game
     </td>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Pacman%20Game.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/game/Pacman%20Game.png?raw=true">
       <br>
       Pacman Game
     </td>
-    <td></td>
   </tr>
 </table>
 
@@ -266,17 +265,17 @@ Without support for these features, the visual output differs significantly from
 <table>
   <tr>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Raw Image.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Mode.png?raw=true">
       <br>
       Raw Image
     </td>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Transition%20Burning.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Transition%20Burning.png?raw=true">
       <br>
       Transition Burning
     </td>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Tissue.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Tissue.png?raw=true">
       <br>
       Tissue
     </td>
@@ -286,53 +285,72 @@ Without support for these features, the visual output differs significantly from
 <table>
   <tr>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Black%20Hole.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Black%20Hole.png?raw=true">
       <br>
       Black Hole
     </td>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Broken%20Time%20Gate.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Broken%20Time%20Gate.png?raw=true">
       <br>
       Broken Time Gate
     </td>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Wrap%20Goodbye%20Dream%20Clouds.png?raw=true">
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Goodbye%20Dream%20Clouds.png?raw=true">
       <br>
       Goodbye Dream Clouds
     </td>
   </tr>
 </table>
 
-### Keyboard Input
+### Keyboard & Mouse & Widget Input
 
 > Note: These visuals are not Flutter UI elements. They are rendered entirely by shaders and respond to keyboard input in real time.
 
-
-<img width="600px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Keyboard.png?raw=true">
+<table>
+  <tr>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Keyboard%20Input.png?raw=true">
+      <br>
+      Keyboard Input
+    </td>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Mouse%20Input.png?raw=true">
+      <br>
+      Mouse Input
+    </td>
+    <td>
+      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Widget%20Input.png?raw=true">
+      <br>
+      Widget Input
+    </td>
+  </tr>
+</table>
 
 ## Others
 
 <table>
   <tr>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/IFrame.png?raw=true">
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/Custom%20Uniforms.png?raw=true">
+      <br>
+      Custom Uniforms
+    </td>
+    <td>
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/IFrame.png?raw=true">
       <br>
       IFrame
     </td>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Noise%20Lab.png?raw=true">
-      <br>
-      Noise Lab
     </td>
   </tr>
   <tr>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Text.png?raw=true">
+      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/Text%20Render.png?raw=true">
       <br>
-      Text
+      Text Render
     </td>
     <td>
-      <img width="300px" src="https://raw.githubusercontent.com/nightmare-space/shader_graph/main/screenshot/Float%20Test.png">
+      <img width="300px" src="https://raw.githubusercontent.com/nightmare-space/shader_graph/main/screenshot/other/Float%20Test.png">
       <br>
       Float Test
     </td>
