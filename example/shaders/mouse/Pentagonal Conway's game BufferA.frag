@@ -4,12 +4,16 @@
 // 3) 适配 vec4 虚拟 texel 的横向 lane pack（x 方向 /4）
 // 4) 显式固定 VSIZE/psize 并做像素边界保护，避免越界读写
 // 5) 增加元数据行保存 prevPressed，实现长按只 toggle 一次（justPressed）
+// 6) 替换 int 的 min/max 为比较运算，修复 SkSL 重载不匹配
+// 7) 替换 vec4 的动态索引为 if 链，修复 SkSL 常量索引限制
 //
 // 1) Add common_header + sg_feedback_rgba8, use SG_LOAD_* / sg_store* for RGBA8 feedback
 // 2) Replace texelFetch and integer % with SG_TEXELFETCH* / SG_LOAD_VEC4 + mod(float)
 // 3) Adapt to lane-packed virtual texels (x / 4)
 // 4) Pin VSIZE/psize constants and add pixel bounds checks to avoid OOB reads/writes
 // 5) Add a metadata row to store prevPressed for justPressed (toggle once per press)
+// 6) Replace int min/max with comparisons to satisfy SkSL overloads
+// 7) Replace vec4 dynamic indexing with if-chains to satisfy SkSL constant-index rules
 
 #include <../common/common_header.frag>
 #include <../common/sg_feedback_rgba8.frag>
@@ -53,7 +57,29 @@ int alive(float v) {
 }
 
 ivec2 clampVpos(ivec2 pos, ivec2 vsize) {
-    return min(max(pos, ivec2(0)), vsize - ivec2(1));
+    int x = pos.x;
+    int y = pos.y;
+    int maxX = vsize.x - 1;
+    int maxY = vsize.y - 1;
+    x = (x < 0) ? 0 : x;
+    y = (y < 0) ? 0 : y;
+    x = (x > maxX) ? maxX : x;
+    y = (y > maxY) ? maxY : y;
+    return ivec2(x, y);
+}
+
+float getVec4At(vec4 v, int idx) {
+    if (idx == 0) return v.x;
+    if (idx == 1) return v.y;
+    if (idx == 2) return v.z;
+    return v.w;
+}
+
+vec4 setVec4At(vec4 v, int idx, float value) {
+    if (idx == 0) return vec4(value, v.y, v.z, v.w);
+    if (idx == 1) return vec4(v.x, value, v.z, v.w);
+    if (idx == 2) return vec4(v.x, v.y, value, v.w);
+    return vec4(v.x, v.y, v.z, value);
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -137,8 +163,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             vec2 resPx = iResolution.xy;
             ivec3 pcoord = coordtopenta(uvmap(mousePx, resPx));
             if (pcoord.xy == vpos) {
-                float oldV = outState[int(pcoord.z)];
-                outState[int(pcoord.z)] = (oldV > 0.5) ? 0.0 : 1.0;
+                int idx = pcoord.z;
+                float oldV = getVec4At(outState, idx);
+                outState = setVec4At(outState, idx, (oldV > 0.5) ? 0.0 : 1.0);
             }
         }
     }

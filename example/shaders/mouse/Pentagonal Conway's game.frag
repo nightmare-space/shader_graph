@@ -2,10 +2,19 @@
 // 1) 添加 common_header + sg_feedback_rgba8，并用 SG_LOAD_VEC4 读取 Buffer 状态
 // 2) 替换 texelFetch：保持“一个虚拟 texel = vec4”的语义
 // 3) 适配 BufferA 额外的元数据行（仅采样模拟区域，忽略最后一行）
+// 4) 替换 vec4 的动态索引为 if 链，修复 SkSL 常量索引限制
 //
 // 1) Add common_header + sg_feedback_rgba8, read state via SG_LOAD_VEC4
 // 2) Replace texelFetch while preserving "one virtual texel = vec4" semantics
 // 3) Adapt to BufferA metadata row (sample simulation area only, ignore the last row)
+// 4) Replace vec4 dynamic indexing with if-chains to satisfy SkSL constant-index rules
+
+float getVec4At(vec4 v, int idx) {
+    if (idx == 0) return v.x;
+    if (idx == 1) return v.y;
+    if (idx == 2) return v.z;
+    return v.w;
+}
 
 #include <../common/common_header.frag>
 #include <../common/sg_feedback_rgba8.frag>
@@ -86,7 +95,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float cell = 0.0;
     if (pcoord.x >= 0 && pcoord.y >= 0 && pcoord.x < SIM_I.x && pcoord.y < SIM_I.y) {
         vec4 s = SG_LOAD_VEC4(iChannel0, pcoord.xy, VSIZE);
-        cell = (s[int(pcoord.z)] > 0.5) ? 1.0 : 0.0;
+        float v = getVec4At(s, pcoord.z);
+        cell = (v > 0.5) ? 1.0 : 0.0;
     }
 
     vec4 c0 = vec4(0.337, 0.404, 0.443, 1.0);
