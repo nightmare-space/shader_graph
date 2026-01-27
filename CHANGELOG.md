@@ -1,3 +1,8 @@
+## 0.1.3(2026.01.27)
+
+- Suppport custom uniforms for ShaderBuffer.
+- Update documentation, examples, and screenshots.
+
 ## 0.1.2(2026.01.17)
 
 - Update documentation.
