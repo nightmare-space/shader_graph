@@ -244,12 +244,12 @@ You can visit the online demos to experience the power of shaders and see what k
 <table>
   <tr>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/game/Bricks%20Game.png?raw=true">
+      <img width="50%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/game/Bricks%20Game.png?raw=true">
       <br>
       Bricks Game
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/game/Pacman%20Game.png?raw=true">
+      <img width="50%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/game/Pacman%20Game.png?raw=true">
       <br>
       Pacman Game
     </td>
@@ -265,17 +265,17 @@ Without support for these features, the visual output differs significantly from
 <table>
   <tr>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Mode.png?raw=true">
+      <img width="33%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Mode.png?raw=true">
       <br>
       Raw Image
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Transition%20Burning.png?raw=true">
+      <img width="33%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Transition%20Burning.png?raw=true">
       <br>
       Transition Burning
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Tissue.png?raw=true">
+      <img width="33%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Tissue.png?raw=true">
       <br>
       Tissue
     </td>
@@ -285,17 +285,17 @@ Without support for these features, the visual output differs significantly from
 <table>
   <tr>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Black%20Hole.png?raw=true">
+      <img width="33%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Black%20Hole.png?raw=true">
       <br>
       Black Hole
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Broken%20Time%20Gate.png?raw=true">
+      <img width="33%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Broken%20Time%20Gate.png?raw=true">
       <br>
       Broken Time Gate
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Goodbye%20Dream%20Clouds.png?raw=true">
+      <img width="33%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/wrap%20filter/Wrap%20Goodbye%20Dream%20Clouds.png?raw=true">
       <br>
       Goodbye Dream Clouds
     </td>
@@ -309,17 +309,17 @@ Without support for these features, the visual output differs significantly from
 <table>
   <tr>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Keyboard%20Input.png?raw=true">
+      <img width="33%%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Keyboard%20Input.png?raw=true">
       <br>
       Keyboard Input
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Mouse%20Input.png?raw=true">
+      <img width="33%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Mouse%20Input.png?raw=true">
       <br>
       Mouse Input
     </td>
     <td>
-      <img width="400px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Widget%20Input.png?raw=true">
+      <img width="33%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/input/Widget%20Input.png?raw=true">
       <br>
       Widget Input
     </td>
@@ -331,12 +331,12 @@ Without support for these features, the visual output differs significantly from
 <table>
   <tr>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/Custom%20Uniforms.png?raw=true">
+      <img width="50%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/Custom%20Uniforms.png?raw=true">
       <br>
       Custom Uniforms
     </td>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/IFrame.png?raw=true">
+      <img width="50%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/IFrame.png?raw=true">
       <br>
       IFrame
     </td>
@@ -345,12 +345,12 @@ Without support for these features, the visual output differs significantly from
   </tr>
   <tr>
     <td>
-      <img width="300px" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/Text%20Render.png?raw=true">
+      <img width="50%" src="https://github.com/nightmare-space/shader_graph/blob/main/screenshot/other/Text%20Render.png?raw=true">
       <br>
       Text Render
     </td>
     <td>
-      <img width="300px" src="https://raw.githubusercontent.com/nightmare-space/shader_graph/main/screenshot/other/Float%20Test.png">
+      <img width="50%" src="https://raw.githubusercontent.com/nightmare-space/shader_graph/main/screenshot/other/Float%20Test.png">
       <br>
       Float Test
     </td>
