@@ -161,7 +161,6 @@ class ShaderSurfaceLayer extends OffsetLayer {
   int _iFrame = 0;
   bool _rendering = false;
   IMouse _iMouse = IMouse(0.0, 0.0, -1.0, -1.0);
-  ui.Image? _lastImage;
   void Function(int renderedIFrame)? onFramePresented;
 
   set iMouse(IMouse v) {
@@ -262,7 +261,6 @@ class ShaderSurfaceLayer extends OffsetLayer {
 
     final picture = recorder.endRecording();
     _lastPicture = picture;
-    _lastImage = img;
     builder.addPicture(offset, picture);
   }
 
