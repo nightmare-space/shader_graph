@@ -4,7 +4,7 @@
 
 It is now even capable of running a **fully shader-driven game**.
 
-![Bricks Game](https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.gif?raw=true)
+![Bricks Game](https://github.com/nightmare-space/shader_graph/blob/main/screenshot/game/Bricks%20Game.gif?raw=true)
 
 This framework connects multiple `.frag` shaders using a **render graph** model, fully supporting Shadertoy-style BufferA / BufferB / Main passes, as well as feedback / ping-pong patterns.
 

@@ -4,7 +4,7 @@
 
 它现在甚至可以运行一个**完全由着色器实现的游戏**。
 
-![Bricks Game](https://github.com/nightmare-space/shader_graph/blob/main/screenshot/Bricks%20Game.gif?raw=true)
+![Bricks Game](https://github.com/nightmare-space/shader_graph/blob/main/screenshot/game/Bricks%20Game.gif?raw=true)
 
 该框架通过「渲染图（Render Graph）」的方式，将多个 `.frag` 串联执行，完整支持 Shadertoy 风格的 BufferA / BufferB / Main、feedback / ping-pong 等模型。
 
