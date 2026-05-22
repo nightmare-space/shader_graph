@@ -75,16 +75,17 @@ class ReactionDiffusionView extends StatelessWidget {
         final bufferD = 'shaders/multi_pass/expansive reaction-diffusion BufferD.frag'.shaderBuffer;
         final mainBuffer = 'shaders/multi_pass/expansive reaction-diffusion.frag'.shaderBuffer;
 
-        bufferA.feedback(filter: .linear).feed(bufferC, filter: .linear).feed(bufferD, filter: .linear);
-        bufferA.feed('assets/textures/RGBA Noise Medium.png', wrap: .repeat, filter: .linear);
+        bufferA.feedback(filter: FilterMode.linear).feed(bufferC, filter: FilterMode.linear);
+        // .feed(bufferD, filter: FilterMode.linear);
+        bufferA.feed('assets/textures/RGBA Noise Medium.png', wrap: WrapMode.repeat, filter: FilterMode.linear);
 
-        bufferB.feed(bufferA, filter: .linear);
-        bufferC.feed(bufferB, filter: .linear);
+        bufferB.feed(bufferA, filter: FilterMode.linear);
+        bufferC.feed(bufferB, filter: FilterMode.linear);
 
         // Scheme B: keep Dart feed order; shader remaps channel slots.
-        mainBuffer.feed(bufferA, filter: .linear);
-        mainBuffer.feed(bufferC, filter: .linear);
-        mainBuffer.feed('assets/textures/RGBA Noise Medium.png', wrap: .repeat, filter: .linear);
+        mainBuffer.feed(bufferA, filter: FilterMode.linear);
+        mainBuffer.feed(bufferC, filter: FilterMode.linear);
+        // mainBuffer.feed('assets/textures/RGBA Noise Medium.png', wrap: WrapMode.repeat, filter: FilterMode.linear);
         return [bufferA, bufferB, bufferC, bufferD, mainBuffer];
       },
       key: ValueKey('reaction_diffusion'),

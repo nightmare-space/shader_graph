@@ -11,7 +11,7 @@ import 'examples/game.dart';
 import 'examples/animation_control.dart';
 import 'examples/float.dart';
 import 'examples/multi_pass.dart';
-import 'examples/shader_input.dart' hide ReactionDiffusionView;
+import 'examples/shader_input.dart';
 import 'examples/text_render.dart';
 import 'examples/wrap.dart';
 
@@ -19,7 +19,7 @@ double narrowWidthThreshold = 600;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MaterialApp(home: Scaffold(body: MyApp())));
+  runApp(const MyApp());
   // check if impeller is used
   // ui.ImageFilter.isShaderFilterSupported;
 }
@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
     return CupertinoApp(
       title: 'Shader Graph Example',
       theme: const CupertinoThemeData(
-        brightness: Brightness.light,
+        brightness: Brightness.dark,
         primaryColor: Colors.deepPurple,
       ),
       onGenerateRoute: (settings) {
@@ -87,7 +87,7 @@ class _RootPageState extends State<RootPage> {
     return ScreenshotExporter(
       // enableExportButton: true,
       child: CupertinoPageScaffold(
-        backgroundColor: Color(0xfff3f5f9),
+        backgroundColor: CupertinoDynamicColor.resolve(CupertinoColors.systemBackground, context),
         navigationBar: CupertinoNavigationBar(
           middle: SingleChildScrollView(
             scrollDirection: Axis.horizontal,

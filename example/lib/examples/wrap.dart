@@ -82,15 +82,15 @@ class _WrapExampleState extends State<WrapExample> {
 
     final clamp = shader.feed(
       assetImage,
-      wrap: .clamp,
+      wrap: WrapMode.clamp,
     );
     final repeat = shader.feed(
       assetImage,
-      wrap: .repeat,
+      wrap: WrapMode.repeat,
     );
     final mirror = shader.feed(
       assetImage,
-      wrap: .mirror,
+      wrap: WrapMode.mirror,
     );
     Widget panel(String title, ShaderBuffer buffer) {
       return Column(
@@ -195,8 +195,8 @@ class _WrapExampleState extends State<WrapExample> {
         }
 
         final widgets = [
-          buildShaderSurface('Clamp', .clamp),
-          buildShaderSurface('Repeat', .repeat),
+          buildShaderSurface('Clamp', WrapMode.clamp),
+          buildShaderSurface('Repeat', WrapMode.repeat),
         ];
 
         return LayoutBuilder(
@@ -262,8 +262,8 @@ class _WrapExampleState extends State<WrapExample> {
         }
 
         final widgets = [
-          buildShaderSurface('Clamp', .clamp),
-          buildShaderSurface('Repeat', .repeat),
+          buildShaderSurface('Clamp', WrapMode.clamp),
+          buildShaderSurface('Repeat', WrapMode.repeat),
         ];
 
         return LayoutBuilder(
@@ -301,7 +301,7 @@ class _WrapExampleState extends State<WrapExample> {
         final texture = 'assets/textures/Stars.jpg';
         Widget shaderSurface(String title, WrapMode wrap, FilterMode filter) {
           return Column(
-            mainAxisAlignment: .center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -321,8 +321,8 @@ class _WrapExampleState extends State<WrapExample> {
         }
 
         final widgets = [
-          shaderSurface('Clamp', .clamp, .nearest),
-          shaderSurface('Repeat', .repeat, .nearest),
+          shaderSurface('Clamp', WrapMode.clamp, FilterMode.nearest),
+          shaderSurface('Repeat', WrapMode.repeat, FilterMode.nearest),
         ];
 
         return LayoutBuilder(
@@ -394,10 +394,10 @@ class _WrapExampleState extends State<WrapExample> {
         }
 
         final widgets = [
-          buildShaderSurface('Clamp Nearest', .clamp, .nearest),
-          buildShaderSurface('Repeat Nearest', .repeat, .nearest),
-          buildShaderSurface('Clamp Linear', .clamp, .linear),
-          buildShaderSurface('Repeat Linear', .repeat, .linear),
+          buildShaderSurface('Clamp Nearest', WrapMode.clamp, FilterMode.nearest),
+          buildShaderSurface('Repeat Nearest', WrapMode.repeat, FilterMode.nearest),
+          buildShaderSurface('Clamp Linear', WrapMode.clamp, FilterMode.linear),
+          buildShaderSurface('Repeat Linear', WrapMode.repeat, FilterMode.linear),
         ];
 
         return LayoutBuilder(
@@ -456,10 +456,10 @@ class _WrapExampleState extends State<WrapExample> {
         }
 
         final widgets = [
-          buildShaderSurface('Clamp Nearest', .clamp, .nearest),
-          buildShaderSurface('Repeat Nearest', .repeat, .nearest),
-          buildShaderSurface('Clamp Linear', .clamp, .linear),
-          buildShaderSurface('Repeat Linear', .repeat, .linear),
+          buildShaderSurface('Clamp Nearest', WrapMode.clamp, FilterMode.nearest),
+          buildShaderSurface('Repeat Nearest', WrapMode.repeat, FilterMode.nearest),
+          buildShaderSurface('Clamp Linear', WrapMode.clamp, FilterMode.linear),
+          buildShaderSurface('Repeat Linear', WrapMode.repeat, FilterMode.linear),
         ];
 
         return LayoutBuilder(

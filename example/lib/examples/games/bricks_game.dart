@@ -114,7 +114,7 @@ class _VirtualButtoonState extends State<VirtualButtoon> {
       child: Material(
         color: Colors.transparent,
         child: Row(
-          crossAxisAlignment: .end,
+          crossAxisAlignment: CrossAxisAlignment.end,
           spacing: 24,
           children: [
             Material(
@@ -146,7 +146,7 @@ class _VirtualButtoonState extends State<VirtualButtoon> {
             //   color: Colors.red,
             // ),
             Column(
-              mainAxisAlignment: .end,
+              mainAxisAlignment: MainAxisAlignment.end,
               spacing: 4,
               children: [
                 // up

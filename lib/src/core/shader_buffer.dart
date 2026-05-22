@@ -386,7 +386,7 @@ class ShaderBuffer extends ChangeNotifier {
       }
     } catch (e) {
       log('Error setting up shader samplers for $shaderAssetPath: $e');
-      throw Exception('Failed to set up shader samplers for $shaderAssetPath: $e');
+      throw Exception('Failed to set up shader samplers for $shaderAssetPath, index: $samplerIndex, error: $e');
     }
   }
 

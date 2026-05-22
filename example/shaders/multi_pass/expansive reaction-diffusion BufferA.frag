@@ -16,7 +16,8 @@
 uniform sampler2D iChannel0;
 uniform sampler2D iChannel1;
 uniform sampler2D iChannel2;
-uniform sampler2D iChannel3;
+// iChannel3 curent not used
+// uniform sampler2D iChannel3;
 
 // main reaction-diffusion loop
 
@@ -99,24 +100,23 @@ vec2 vortex_pair_warp(vec2 uv, vec2 pos, vec2 vel)
     return (circle1 + circle2) / 2.;
 }
 
-vec2 mouseDelta(){
-    vec2 pixelSize = 1. / iResolution.xy;
-    float eighth = 1./8.;
-    vec4 oldMouse = SG_TEX2(iChannel2, vec2(7.5 * eighth, 2.5 * eighth));
-    vec4 nowMouse = vec4(iMouse.xy / iResolution.xy, iMouse.zw / iResolution.xy);
-    if(oldMouse.z > pixelSize.x && oldMouse.w > pixelSize.y && 
-       nowMouse.z > pixelSize.x && nowMouse.w > pixelSize.y)
-    {
-        return nowMouse.xy - oldMouse.xy;
-    }
-    return vec2(0.);
-}
+// vec2 mouseDelta(){
+//     vec2 pixelSize = 1. / iResolution.xy;
+//     float eighth = 1./8.;
+//     vec4 oldMouse = SG_TEX2(iChannel3, vec2(7.5 * eighth, 2.5 * eighth));
+//     vec4 nowMouse = vec4(iMouse.xy / iResolution.xy, iMouse.zw / iResolution.xy);
+//     if(oldMouse.z > pixelSize.x && oldMouse.w > pixelSize.y && 
+//        nowMouse.z > pixelSize.x && nowMouse.w > pixelSize.y)
+//     {
+//         return nowMouse.xy - oldMouse.xy;
+//     }
+//     return vec2(0.);
+// }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 	vec2 uv = fragCoord.xy / iResolution.xy;
     vec2 pixelSize = 1. / iResolution.xy;
-    
 
         // Shadertoy reference: mouse should only affect the lighting in the main pass.
         // Keep the diffusion field in BufferA independent of mouse input.
@@ -126,7 +126,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec4 blur1 = SG_TEX1(iChannel1, uv);
     
-    vec4 noise = SG_TEX3(iChannel3, fragCoord.xy / iChannelResolution3.xy + fract(vec2(42,56)*iTime));
+    vec4 noise = SG_TEX2(iChannel2, fragCoord.xy / iChannelResolution2.xy + fract(vec2(42,56)*iTime));
 
     // get the gradients from the blurred image
 	vec2 d = pixelSize*4.;

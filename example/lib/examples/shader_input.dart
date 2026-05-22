@@ -159,38 +159,6 @@ class _ShaderInputExampleState extends State<ShaderInputExample> {
   }
 }
 
-class ReactionDiffusionView extends StatelessWidget {
-  const ReactionDiffusionView({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ShaderSurface.builder(
-      () {
-        final bufferA = 'shaders/multi_pass/expansive reaction-diffusion BufferA.frag'.shaderBuffer;
-        final bufferB = 'shaders/multi_pass/expansive reaction-diffusion BufferB.frag'.shaderBuffer;
-        final bufferC = 'shaders/multi_pass/expansive reaction-diffusion BufferC.frag'.shaderBuffer;
-        final bufferD = 'shaders/multi_pass/expansive reaction-diffusion BufferD.frag'.shaderBuffer;
-        final mainBuffer = 'shaders/multi_pass/expansive reaction-diffusion.frag'.shaderBuffer;
-
-        bufferA.feedback(filter: .linear).feed(bufferC, filter: .linear).feed(bufferD, filter: .linear);
-        bufferA.feed('assets/textures/RGBA Noise Medium.png', wrap: .repeat, filter: .linear);
-
-        bufferB.feed(bufferA, filter: .linear);
-        bufferC.feed(bufferB, filter: .linear);
-
-        // Scheme B: keep Dart feed order; shader remaps channel slots.
-        mainBuffer.feed(bufferA, filter: .linear);
-        mainBuffer.feed(bufferC, filter: .linear);
-        mainBuffer.feed('assets/textures/RGBA Noise Medium.png', wrap: .repeat, filter: .linear);
-        return [bufferA, bufferB, bufferC, bufferD, mainBuffer];
-      },
-      key: ValueKey('reaction_diffusion'),
-    );
-  }
-}
-
 /// 这是另一种可以将 Widget 作为输入的方式，关键 API 是 ImageFilter.shader
 /// 但是这个仅仅适用于 Impeller，而且对着色器的宏定义有要求
 ///
@@ -249,13 +217,14 @@ class RenderMinimalGlass extends RenderProxyBox {
   RenderMinimalGlass({
     required FragmentShader shader,
     required TickerProvider ticker,
-  }) : _shader = shader,
-       _tickerProvider = ticker {
+  })  : _shader = shader,
+        _tickerProvider = ticker {
     _ticker = _tickerProvider.createTicker((elapsed) {
       _time = elapsed.inMilliseconds / 1000.0;
       if (layer != null) layer!.markNeedsAddToScene();
       markNeedsPaint();
-    })..start();
+    })
+      ..start();
   }
 
   FragmentShader _shader;
@@ -276,7 +245,8 @@ class RenderMinimalGlass extends RenderProxyBox {
       _time = elapsed.inMilliseconds / 1000.0;
       if (layer != null) layer!.markNeedsAddToScene();
       markNeedsPaint();
-    })..start();
+    })
+      ..start();
   }
 
   double _time = 0.0;
