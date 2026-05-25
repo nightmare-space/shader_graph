@@ -1,6 +1,8 @@
-import 'package:example/main.dart';
 import 'package:flutter/material.dart';
 import 'package:shader_graph/shader_graph.dart';
+
+import 'package:shader_graph_example/assets.dart';
+import 'package:shader_graph_example/main.dart';
 
 /// 这个游戏在 Android 上球的轨迹不正常，待研究，应该是 float 精度问题
 ///
@@ -41,8 +43,8 @@ class _BricksGameState extends State<BricksGame> {
               height: height,
               child: ShaderSurface.builder(
                 () {
-                  final bufferA = 'shaders/game_ported/Bricks Game BufferA.frag'.feedback().feedKeyboard();
-                  final mainBuffer = 'shaders/game_ported/Bricks Game.frag'.feed(bufferA);
+                  final bufferA = Assets.bricksGameBufferA.shaderBuffer.feedback().feedKeyboard();
+                  final mainBuffer = Assets.bricksGame.shaderBuffer.feed(bufferA);
                   // Standard scheme: physical width = virtual * 4
                   bufferA.fixedOutputSize = const Size(14 * 4.0, 14);
 
@@ -58,7 +60,7 @@ class _BricksGameState extends State<BricksGame> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: VirtualButtoon(keyboardController: keyboardController),
+                    child: VirtualButton(keyboardController: keyboardController),
                   ),
                 ],
               ),
@@ -69,15 +71,15 @@ class _BricksGameState extends State<BricksGame> {
   }
 }
 
-class VirtualButtoon extends StatefulWidget {
-  const VirtualButtoon({super.key, required this.keyboardController});
+class VirtualButton extends StatefulWidget {
+  const VirtualButton({super.key, required this.keyboardController});
   final KeyboardController keyboardController;
 
   @override
-  State<VirtualButtoon> createState() => _VirtualButtoonState();
+  State<VirtualButton> createState() => _VirtualButtonState();
 }
 
-class _VirtualButtoonState extends State<VirtualButtoon> {
+class _VirtualButtonState extends State<VirtualButton> {
   late KeyboardController keyboardController = widget.keyboardController;
   Material buildButton(int keyCode, {Widget? child}) {
     return Material(

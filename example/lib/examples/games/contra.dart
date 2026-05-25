@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:shader_graph/shader_graph.dart';
+import 'package:shader_graph_example/assets.dart';
 
 /// 没移植成功
 /// Contra Game ported failed currently
@@ -10,11 +11,11 @@ class ContraGame extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShaderSurface.builder(
       () {
-        final bufferA = 'shaders/game_ported/Contra BufferA.frag'.shaderBuffer;
-        final bufferB = 'shaders/game_ported/Contra BufferB.frag'.shaderBuffer;
-        final bufferC = 'shaders/game_ported/Contra BufferC.frag'.shaderBuffer;
-        final bufferD = 'shaders/game_ported/Contra BufferD.frag'.shaderBuffer;
-        final mainBuffer = 'shaders/game_ported/Contra.frag'.shaderBuffer;
+        final bufferA = Assets.contraBufferA.shaderBuffer;
+        final bufferB = Assets.contraBufferB.shaderBuffer;
+        final bufferC = Assets.contraBufferC.shaderBuffer;
+        final bufferD = Assets.contraBufferD.shaderBuffer;
+        final mainBuffer = Assets.contra.shaderBuffer;
 
         // Standard scheme: physical width = virtual * 4
         bufferA.fixedOutputSize = const Size(21 * 4.0, 6.0);

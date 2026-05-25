@@ -1,9 +1,9 @@
 import 'dart:math';
-
-import 'package:example/main.dart';
 import 'package:flutter/material.dart';
-import 'package:shader_graph/shader_graph.dart';
 
+import 'package:shader_graph/shader_graph.dart';
+import 'package:shader_graph_example/assets.dart';
+import 'package:shader_graph_example/main.dart';
 import 'bricks_game.dart';
 
 // 不知道为什啥，之前这个游戏在 macOS 上跑是正常的
@@ -42,9 +42,9 @@ class _PacmanGameState extends State<PacmanGame> {
               height: height,
               child: ShaderSurface.builder(
                 () {
-                  final bufferA = 'shaders/game_ported/Pacman Game BufferA.frag'.shaderBuffer;
-                  final bufferB = 'shaders/game_ported/Pacman Game BufferB.frag'.shaderBuffer;
-                  final mainBuffer = 'shaders/game_ported/Pacman Game.frag'.shaderBuffer;
+                  final bufferA = Assets.pacmanGameBufferA.shaderBuffer;
+                  final bufferB = Assets.pacmanGameBufferB.shaderBuffer;
+                  final mainBuffer = Assets.pacmanGame.shaderBuffer;
                   bufferA.fixedOutputSize = const Size(32 * 4.0, 32);
                   bufferA.feedback().feedKeyboard();
                   bufferB.feedShader(bufferA);
@@ -62,7 +62,7 @@ class _PacmanGameState extends State<PacmanGame> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: VirtualButtoon(keyboardController: keyboardController),
+                    child: VirtualButton(keyboardController: keyboardController),
                   ),
                 ],
               ),

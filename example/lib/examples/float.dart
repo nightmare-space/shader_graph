@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shader_graph/shader_graph.dart';
+import 'package:shader_graph_example/assets.dart';
 
 /// 这个例子其实是在观察 GPU 内存中的数据
 ///
@@ -23,7 +24,7 @@ class _FloatExampleState extends State<FloatExample> {
     // Virtual (shader): 3x2 texels, each texel is a vec4.
     // Physical (Flutter): 3*4 lanes x 2 = 12x2.
     if (staticVec4GridA == null || staticVec4GridA!.isDisposed) {
-      staticVec4GridA = 'shaders/multi_pass/Static Vec4 Grid A.frag'.shaderBuffer;
+      staticVec4GridA = Assets.staticVec4GridA.shaderBuffer;
       staticVec4GridA!.fixedOutputSize = const Size(3 * 4.0, 2);
       staticVec4GridA!.feedEmpty();
     }
@@ -210,8 +211,7 @@ class _Vec4GridPainter extends CustomPainter {
         final dz = z - exp.z;
         final dw = w - exp.w;
 
-        final text =
-            'x e:${_fmtSigned(exp.x)} d:${_fmtSigned(x)} Δ:${_fmtDelta(dx)}\n'
+        final text = 'x e:${_fmtSigned(exp.x)} d:${_fmtSigned(x)} Δ:${_fmtDelta(dx)}\n'
             'y e:${_fmtSigned(exp.y)} d:${_fmtSigned(y)} Δ:${_fmtDelta(dy)}\n'
             'z e:${_fmtSigned(exp.z)} d:${_fmtSigned(z)} Δ:${_fmtDelta(dz)}\n'
             'w e:${_fmtSigned(exp.w)} d:${_fmtSigned(w)} Δ:${_fmtDelta(dw)}';

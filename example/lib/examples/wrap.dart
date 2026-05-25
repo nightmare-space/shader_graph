@@ -1,14 +1,7 @@
-import 'dart:ui';
-import 'dart:ui' as ui;
-
-import 'package:example/main.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_shaders/flutter_shaders.dart' hide AnimatedSampler;
 import 'package:shader_graph/shader_graph.dart';
+import 'package:shader_graph_example/assets.dart';
+import 'package:shader_graph_example/main.dart';
 
 class WrapExample extends StatefulWidget {
   const WrapExample({super.key});
@@ -69,8 +62,8 @@ class _WrapExampleState extends State<WrapExample> {
   bool useWidgetInput = true;
 
   LayoutBuilder buildRawImageWrap() {
-    const String shader = 'shaders/wrap/Wrap Debug.frag';
-    const String texture = 'assets/textures/Rock Tiles.jpg';
+    String shader = Assets.wrapDebug;
+    String texture = Assets.rockTiles;
 
     Widget assetImage = Image.asset(
       texture,
@@ -145,9 +138,9 @@ class _WrapExampleState extends State<WrapExample> {
   Builder buildTransitionBurning() {
     return Builder(
       builder: (context) {
-        final shaderPath = 'shaders/wrap/Transition Burning.frag';
-        final texture1 = 'assets/textures/Rock Tiles.jpg';
-        final texture2 = 'assets/textures/Pebbles.png';
+        final shaderPath = Assets.transitionBurning;
+        final texture1 = Assets.rockTiles;
+        final texture2 = Assets.pebbles;
         Widget buildShaderSurface(String title, WrapMode wrap) {
           final buffer = shaderPath.shaderBuffer;
           final assetsInputShader = shaderPath.feed(texture1, wrap: wrap).feed(texture2, wrap: wrap);
@@ -230,8 +223,8 @@ class _WrapExampleState extends State<WrapExample> {
   Builder buildTissue() {
     return Builder(
       builder: (_) {
-        final shaderPath = 'shaders/wrap/Tissue.frag';
-        final texture = 'assets/textures/Abstract1.jpg';
+        final shaderPath = Assets.tissue;
+        final texture = Assets.abstract1;
         Widget buildShaderSurface(String title, WrapMode wrap) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -297,8 +290,8 @@ class _WrapExampleState extends State<WrapExample> {
   Builder buildBlackHoleODEGeodesicSolver() {
     return Builder(
       builder: (context) {
-        final main = 'shaders/wrap/Black Hole ODE Geodesic Solver.frag';
-        final texture = 'assets/textures/Stars.jpg';
+        final main = Assets.blackHole;
+        final texture = Assets.stars;
         Widget shaderSurface(String title, WrapMode wrap, FilterMode filter) {
           return Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -362,8 +355,8 @@ class _WrapExampleState extends State<WrapExample> {
   Builder buildBrokenTime() {
     return Builder(
       builder: (context) {
-        final main = 'shaders/wrap/Broken Time Gate.frag';
-        final texture = 'assets/textures/Grey Noise Medium.png';
+        final main = Assets.brokenTimeGate;
+        final texture = Assets.greyNoiseMedium;
         Widget buildShaderSurface(String title, WrapMode wrap, FilterMode filter) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -423,8 +416,8 @@ class _WrapExampleState extends State<WrapExample> {
   Builder buildGoodbyeDreamClouds() {
     return Builder(
       builder: (_) {
-        final shaderPath = 'shaders/wrap/Goodbye Dream Clouds.frag';
-        final texture = 'assets/textures/RGBA Noise Medium.png';
+        final shaderPath = Assets.goodbyeDreamClouds;
+        final texture = Assets.rgbaNoiseMedium;
         Widget buildShaderSurface(String title, WrapMode wrap, FilterMode filter) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.center,

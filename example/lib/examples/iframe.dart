@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:shader_graph/shader_graph.dart';
+import 'package:shader_graph_example/assets.dart';
 
 class IframeExample extends StatelessWidget {
   const IframeExample({super.key});
@@ -8,8 +9,8 @@ class IframeExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShaderSurface.builder(
       () {
-        final sourceBuffer = 'shaders/frame/IFrame Test.frag'.shaderBuffer;
-        final overlayBuffer = 'shaders/keyboard/Keyboard Debug Overlay.frag'.shaderBuffer;
+        final sourceBuffer = Assets.iFrameTestShader.shaderBuffer;
+        final overlayBuffer = Assets.keyboardDebugOverlay.shaderBuffer;
         overlayBuffer.feed(sourceBuffer);
         overlayBuffer.feedKeyboard();
         return [sourceBuffer, overlayBuffer];

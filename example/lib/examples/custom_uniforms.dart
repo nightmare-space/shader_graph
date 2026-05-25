@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:shader_graph/shader_graph.dart';
+import 'package:shader_graph_example/assets.dart';
 
 class CustomUniformsExample extends StatefulWidget {
   const CustomUniformsExample({super.key});
@@ -9,7 +10,7 @@ class CustomUniformsExample extends StatefulWidget {
 }
 
 class _CustomUniformsExampleState extends State<CustomUniformsExample> with TickerProviderStateMixin {
-  final buffer = 'shaders/touch_simple.frag'.shaderBuffer;
+  final buffer = Assets.touchSimple.shaderBuffer;
   late AnimationController liftController = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 100),

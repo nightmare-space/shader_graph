@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:shader_graph/shader_graph.dart';
+import 'package:shader_graph_example/assets.dart';
 
 class MultiPassExample extends StatefulWidget {
   const MultiPassExample({super.key});
@@ -50,8 +51,8 @@ class _MultiPassExampleState extends State<MultiPassExample> {
   ShaderSurface buildMacWallpaper() {
     return ShaderSurface.builder(
       () {
-        final mainBuffer = 'shaders/multi_pass/MacOS Monterey wallpaper.frag'.shaderBuffer;
-        final bufferA = 'shaders/multi_pass/MacOS Monterey wallpaper BufferA.frag'.shaderBuffer;
+        final mainBuffer = Assets.macWallpaper.shaderBuffer;
+        final bufferA = Assets.macWallpaperBufferA.shaderBuffer;
         mainBuffer.feedShader(bufferA);
         return [mainBuffer, bufferA];
       },
@@ -69,11 +70,11 @@ class ReactionDiffusionView extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShaderSurface.builder(
       () {
-        final bufferA = 'shaders/multi_pass/expansive reaction-diffusion BufferA.frag'.shaderBuffer;
-        final bufferB = 'shaders/multi_pass/expansive reaction-diffusion BufferB.frag'.shaderBuffer;
-        final bufferC = 'shaders/multi_pass/expansive reaction-diffusion BufferC.frag'.shaderBuffer;
-        final bufferD = 'shaders/multi_pass/expansive reaction-diffusion BufferD.frag'.shaderBuffer;
-        final mainBuffer = 'shaders/multi_pass/expansive reaction-diffusion.frag'.shaderBuffer;
+        final bufferA = Assets.reactionDiffusionBufferA.shaderBuffer;
+        final bufferB = Assets.reactionDiffusionBufferB.shaderBuffer;
+        final bufferC = Assets.reactionDiffusionBufferC.shaderBuffer;
+        final bufferD = Assets.reactionDiffusionBufferD.shaderBuffer;
+        final mainBuffer = Assets.reactionDiffusionMain.shaderBuffer;
 
         bufferA.feedback(filter: FilterMode.linear).feed(bufferC, filter: FilterMode.linear);
         // .feed(bufferD, filter: FilterMode.linear);

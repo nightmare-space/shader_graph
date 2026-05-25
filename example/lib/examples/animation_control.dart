@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:shader_graph/shader_graph.dart';
+import 'package:shader_graph_example/assets.dart';
 
 class AnimationControlExample extends StatefulWidget {
   const AnimationControlExample({super.key});
@@ -25,7 +27,7 @@ class _AnimationControlExampleState extends State<AnimationControlExample> {
         children: [
           Expanded(
             child: ShaderSurface.auto(
-              'shaders/frame/IFrame Test.frag',
+              Assets.iFrameTest,
               shaderController: controller,
             ),
           ),

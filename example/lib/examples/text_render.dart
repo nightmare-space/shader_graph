@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:shader_graph/shader_graph.dart';
+import 'package:shader_graph_example/assets.dart';
 
 class TextRenderExample extends StatelessWidget {
   const TextRenderExample({super.key});
@@ -8,8 +9,8 @@ class TextRenderExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShaderSurface.builder(
       () {
-        final mainBuffer = 'shaders/text/Text Texture.frag'.shaderBuffer;
-        mainBuffer.feedImageFromAsset('assets/codepage12.png');
+        final mainBuffer = Assets.textTexture.shaderBuffer;
+        mainBuffer.feedImageFromAsset(Assets.codepage12);
         return [mainBuffer];
       },
     );

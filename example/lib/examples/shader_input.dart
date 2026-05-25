@@ -1,13 +1,13 @@
 import 'dart:ui';
 import 'dart:ui' as ui;
-
-import 'package:example/main.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+
 import 'package:flutter_shaders/flutter_shaders.dart';
 import 'package:shader_graph/shader_graph.dart';
+import 'package:shader_graph_example/assets.dart';
+import 'package:shader_graph_example/main.dart';
 
 class ShaderInputExample extends StatefulWidget {
   const ShaderInputExample({super.key});
@@ -65,7 +65,7 @@ class _ShaderInputExampleState extends State<ShaderInputExample> {
         const virtualSize = Size(128, 128);
         final physicalSize = Size(virtualSize.width * 4.0, virtualSize.height + 1.0);
 
-        final bufferA = "shaders/mouse/Pentagonal Conway's game BufferA.frag".shaderBuffer
+        final bufferA = Assets.pentagonalConwayBufferA.shaderBuffer
           ..fixedOutputSize = physicalSize
           // BufferA uses a fixed-size lane-packed render target, but mouse input should
           // match the on-screen surface size. We map surface-space iMouse -> VSIZE inside
@@ -74,7 +74,7 @@ class _ShaderInputExampleState extends State<ShaderInputExample> {
           ..feedback()
           ..feedKeyboard();
 
-        final main = "shaders/mouse/Pentagonal Conway's game.frag".shaderBuffer..feedShader(bufferA);
+        final main = Assets.pentagonalConway.shaderBuffer..feedShader(bufferA);
 
         return [bufferA, main];
       },
@@ -85,11 +85,11 @@ class _ShaderInputExampleState extends State<ShaderInputExample> {
   Widget buildKeyboardInput() {
     return ShaderSurface.builder(
       () {
-        final mainBuffer = 'shaders/keyboard/Keyboard Test.frag'.shaderBuffer;
+        final mainBuffer = Assets.keyboardTest.shaderBuffer;
         mainBuffer.feedKeyboard();
-        mainBuffer.feedImageFromAsset('assets/codepage12.png');
+        mainBuffer.feedImageFromAsset(Assets.codepage12);
 
-        final overlayBuffer = 'shaders/keyboard/Keyboard Debug Overlay.frag'.shaderBuffer;
+        final overlayBuffer = Assets.keyboardDebugOverlay.shaderBuffer;
         overlayBuffer.feedShader(mainBuffer);
         overlayBuffer.feedKeyboard();
         return [mainBuffer, overlayBuffer];
@@ -99,7 +99,7 @@ class _ShaderInputExampleState extends State<ShaderInputExample> {
 
   Widget buildWidgetInput() {
     final imageWidget = Image.asset(
-      'assets/textures/Rock Tiles.jpg',
+      Assets.rockTiles,
       fit: BoxFit.cover,
     );
     final widgets = [
@@ -110,7 +110,7 @@ class _ShaderInputExampleState extends State<ShaderInputExample> {
             Text('feedWidgetInput', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             Expanded(
               child: ShaderSurface.auto(
-                'shaders/wrap/Inverse Bilinear.frag'.feed(imageWidget),
+                Assets.inverseBilinear.shaderBuffer.feed(imageWidget),
               ),
             ),
           ],
@@ -177,7 +177,7 @@ class _WidgetInputTestState extends State<WidgetInputTest> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return ShaderBuilder(
-      assetKey: 'shaders/wrap/Inverse Bilinear.frag',
+      assetKey: Assets.inverseBilinear,
       (context, shader, child) {
         return _RawMinimalGlass(
           shader: shader,
