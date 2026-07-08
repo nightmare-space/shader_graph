@@ -76,17 +76,19 @@ class ReactionDiffusionView extends StatelessWidget {
         final bufferD = Assets.reactionDiffusionBufferD.shaderBuffer;
         final mainBuffer = Assets.reactionDiffusionMain.shaderBuffer;
 
-        bufferA.feedback(filter: FilterMode.linear).feed(bufferC, filter: FilterMode.linear);
-        // .feed(bufferD, filter: FilterMode.linear);
-        bufferA.feed('assets/textures/RGBA Noise Medium.png', wrap: WrapMode.repeat, filter: FilterMode.linear);
+        bufferA
+            .feedback(filter: FilterMode.linear)
+            .feed(bufferC, filter: FilterMode.linear)
+            .feed(Assets.rgbaNoiseMedium, wrap: WrapMode.repeat, filter: FilterMode.linear);
 
         bufferB.feed(bufferA, filter: FilterMode.linear);
         bufferC.feed(bufferB, filter: FilterMode.linear);
 
         // Scheme B: keep Dart feed order; shader remaps channel slots.
-        mainBuffer.feed(bufferA, filter: FilterMode.linear);
-        mainBuffer.feed(bufferC, filter: FilterMode.linear);
-        // mainBuffer.feed('assets/textures/RGBA Noise Medium.png', wrap: WrapMode.repeat, filter: FilterMode.linear);
+        mainBuffer
+            .feed(bufferA, filter: FilterMode.linear)
+            .feed(bufferC, filter: FilterMode.linear)
+            .feed(Assets.rgbaNoiseMedium, wrap: WrapMode.repeat, filter: FilterMode.linear);
         return [bufferA, bufferB, bufferC, bufferD, mainBuffer];
       },
       key: ValueKey('reaction_diffusion'),
