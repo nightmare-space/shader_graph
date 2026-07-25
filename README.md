@@ -413,7 +413,8 @@ Currently supported input types include:
 - `feedWidgetInput(Widget)`
 - `feedShader(ShaderBuffer)`
 - `feedShaderFromAsset(String)`
-- `feedImageFromAsset(String)`
+- `feedImage(ImageProvider)`
+- `feedImageFromAsset(String)` (deprecated)
 
 Of course, you can also directly call the original APIs.
 
@@ -463,7 +464,7 @@ final buffer = '$shader_asset_path'.shaderBuffer
   // will call feedShaderFromAsset
   .feed('$texture_asset_path1')
   // path ends with .png/.jpg
-  // will call feedImageFromAsset
+  // will call feedImage with AssetImage
   .feed('$texture_asset_path2')
   // will call feedWidgetInput
   .feed(imageWidget)
@@ -624,12 +625,12 @@ Column(
     Text('This is a shader:'),
     Builder(builder: (context) {
         final mainBuffer = ShaderBuffer('$shader_asset_path');
-        mainBuffer.feedImageFromAsset('$noise_asset_path');
+        mainBuffer.feedImage(AssetImage('$noise_asset_path'));
         return ShaderSurface.auto(mainBuffer);
     }),
     Builder(builder: (context) {
         final mainBuffer = ShaderBuffer('$shader_asset_path');
-        mainBuffer.feedImageFromAsset('$noise_asset_path');
+        mainBuffer.feedImage(AssetImage('$noise_asset_path'));
         return ShaderSurface.auto(mainBuffer);
     }),
   ],

@@ -420,7 +420,8 @@ ShaderBuffer 支持多种输入源，用于模拟 Shadertoy 中的 iChannel 行�
 - `feedWidgetInput(Widget)`
 - `feedShader(ShaderBuffer)`
 - `feedShaderFromAsset(String)`
-- `feedImageFromAsset(String)`
+- `feedImage(ImageProvider)`
+- `feedImageFromAsset(String)`（已弃用）
 
 当然，你也可以直接调用原始的 API
 
@@ -470,7 +471,7 @@ final buffer = '$shader_asset_path'.shaderBuffer
   // will call feedShaderFromAsset
   .feed('$texture_asset_path1')
   // path ends with .png/.jpg
-  // will call feedImageFromAsset
+  // will call feedImage with AssetImage
   .feed('$texture_asset_path2')
   // will call feedWidgetInput
   .feed(imageWidget)
@@ -689,12 +690,12 @@ Column(
     Text('This is a shader:'),
     Builder(builder: (context) {
         final mainBuffer = ShaderBuffer('$shader_asset_path');
-        mainBuffer.feedImageFromAsset('$noise_asset_path');
+        mainBuffer.feedImage(AssetImage('$noise_asset_path'));
         return ShaderSurface.auto(mainBuffer);
     }),
     Builder(builder: (context) {
         final mainBuffer = ShaderBuffer('$shader_asset_path');
-        mainBuffer.feedImageFromAsset('$noise_asset_path');
+        mainBuffer.feedImage(AssetImage('$noise_asset_path'));
         return ShaderSurface.auto(mainBuffer);
     }),
   ],
