@@ -87,7 +87,7 @@ class _ShaderInputExampleState extends State<ShaderInputExample> {
       () {
         final mainBuffer = Assets.keyboardTest.shaderBuffer;
         mainBuffer.feedKeyboard();
-        mainBuffer.feedImageFromAsset(Assets.codepage12);
+        mainBuffer.feedImage(AssetImage(Assets.codepage12));
 
         final overlayBuffer = Assets.keyboardDebugOverlay.shaderBuffer;
         overlayBuffer.feedShader(mainBuffer);

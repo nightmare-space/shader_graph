@@ -40,6 +40,8 @@ extension ShaderBufferDSL on ShaderBuffer {
   }) {
     if (input is ShaderBuffer) {
       return feedShader(input, wrap: wrap, filter: filter);
+    } else if (input is ImageProvider) {
+      return feedImage(input, wrap: wrap, filter: filter);
     } else if (input is Widget) {
       return feedWidgetInput(input, wrap: wrap, filter: filter);
     } else if (input is String) {
@@ -47,10 +49,10 @@ extension ShaderBufferDSL on ShaderBuffer {
       if (ext == '.frag') {
         return feedShaderFromAsset(input, wrap: wrap, filter: filter);
       } else {
-        return feedImageFromAsset(input, wrap: wrap, filter: filter);
+        return feedImage(AssetImage(input), wrap: wrap, filter: filter);
       }
     } else {
-      throw ArgumentError('input must be ShaderBuffer/String/Widget, got ${input.runtimeType}');
+      throw ArgumentError('input must be ShaderBuffer/ImageProvider/String/Widget, got ${input.runtimeType}');
     }
   }
 }

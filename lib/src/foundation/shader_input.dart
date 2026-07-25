@@ -9,6 +9,8 @@ import 'wrap_mode.dart';
 abstract class ShaderInput {
   Image? resolve();
 
+  void dispose() {}
+
   /// UV wrap semantics expected by the shader.
   ///
   /// Defaults to clamp for compatibility.

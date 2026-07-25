@@ -10,7 +10,7 @@ class TextRenderExample extends StatelessWidget {
     return ShaderSurface.builder(
       () {
         final mainBuffer = Assets.textTexture.shaderBuffer;
-        mainBuffer.feedImageFromAsset(Assets.codepage12);
+        mainBuffer.feedImage(AssetImage(Assets.codepage12));
         return [mainBuffer];
       },
     );

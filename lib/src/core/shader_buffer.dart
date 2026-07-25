@@ -109,12 +109,24 @@ class ShaderBuffer extends ChangeNotifier {
   ///
   /// Adding an image resource as input, loading from assetPath,
   /// corresponding to iChannelN in the shader
+  @Deprecated("Use feedImage(AssetImage(assetPath)) instead.")
   ShaderBuffer feedImageFromAsset(
     String assetPath, {
     WrapMode wrap = WrapMode.clamp,
     FilterMode filter = FilterMode.linear,
   }) {
-    _inputs.add(AssetInput(assetPath: assetPath, wrap: wrap, filter: filter));
+    return feedImage(AssetImage(assetPath), wrap: wrap, filter: filter);
+  }
+
+  /// 添加一个 Flutter ImageProvider 作为输入，对应 shader 里的 iChannelN
+  ///
+  /// Adding a Flutter ImageProvider as input, corresponding to iChannelN in the shader
+  ShaderBuffer feedImage(
+    ImageProvider provider, {
+    WrapMode wrap = WrapMode.clamp,
+    FilterMode filter = FilterMode.linear,
+  }) {
+    _inputs.add(ImageProviderInput(provider: provider, wrap: wrap, filter: filter));
     return this;
   }
 
@@ -510,6 +522,9 @@ class ShaderBuffer extends ChangeNotifier {
     if (_blankImage != null) images.add(_blankImage!);
     for (final img in images) {
       img.dispose();
+    }
+    for (final input in _inputs) {
+      input.dispose();
     }
     _output = null;
     _prevOutput = null;

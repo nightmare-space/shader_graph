@@ -28,36 +28,59 @@ class ShaderBufferInput extends ShaderInput {
   }
 }
 
-/// 输入来自应用资源包中的图片。
+/// 输入来自 Flutter ImageProvider。
 ///
-/// Input comes from an image in the app's asset bundle.
-class AssetInput extends ShaderInput {
-  AssetInput({required this.assetPath, this.wrap = WrapMode.clamp, this.filter = FilterMode.linear});
-  ui.Image? image;
-  final String assetPath;
-  bool _isLoading = false;
+/// Input comes from a Flutter ImageProvider.
+class ImageProviderInput extends ShaderInput {
+  ImageProviderInput(
+      {required this.provider,
+      this.wrap = WrapMode.clamp,
+      this.filter = FilterMode.linear});
+
+  final ImageProvider provider;
+  ImageStream? _stream;
+  ImageStreamListener? _listener;
+  ImageInfo? _imageInfo;
+
   @override
   final WrapMode wrap;
 
   @override
   final FilterMode filter;
 
-  void loadAssetImage() async {
-    final assetImageByteData = await rootBundle.load(assetPath);
-    final codec = await ui.instantiateImageCodec(assetImageByteData.buffer.asUint8List());
-    image = (await codec.getNextFrame()).image;
-    _isLoading = false;
+  void _resolveProvider() {
+    _stream = provider.resolve(ImageConfiguration.empty);
+    _listener = ImageStreamListener(
+      (imageInfo, _) {
+        _imageInfo?.dispose();
+        _imageInfo = imageInfo;
+      },
+      onError: (Object error, StackTrace? stackTrace) {
+        debugPrint('Failed to resolve image provider $provider: $error');
+      },
+    );
+    _stream!.addListener(_listener!);
   }
 
   @override
   ui.Image? resolve() {
-    if (image == null && !_isLoading) {
-      // 读取图标资源
-      // start reading asset from rooutBundle
-      _isLoading = true;
-      loadAssetImage();
+    if (_stream == null) {
+      _resolveProvider();
     }
-    return image;
+    return _imageInfo?.image;
+  }
+
+  @override
+  void dispose() {
+    final stream = _stream;
+    final listener = _listener;
+    if (stream != null && listener != null) {
+      stream.removeListener(listener);
+    }
+    _imageInfo?.dispose();
+    _imageInfo = null;
+    _stream = null;
+    _listener = null;
   }
 }
 
