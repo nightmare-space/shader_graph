@@ -71,6 +71,14 @@ class ShaderBuffer extends ChangeNotifier {
     return this;
   }
 
+  /// 添加一个自定义 ShaderInput，对应 shader 里的 iChannelN
+  ///
+  /// Adding a custom ShaderInput, corresponding to iChannelN in the shader
+  ShaderBuffer feedInput(ShaderInput input) {
+    _inputs.add(input);
+    return this;
+  }
+
   ShaderBuffer feedWidgetInput(
     Widget widget, {
     WrapMode wrap = WrapMode.clamp,

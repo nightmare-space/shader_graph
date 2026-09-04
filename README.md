@@ -519,6 +519,18 @@ abstract class ShaderInput {
   /// Defaults to linear for compatibility.
   FilterMode get filter => FilterMode.linear;
 }
+
+class ImageShaderInput extends ShaderInput {
+  ui.Image? image;
+
+  @override
+  ui.Image? resolve() => image;
+}
+
+final imageInput = ImageShaderInput()..image = image;
+buffer.feedInput(imageInput);
+// or
+buffer.feed(imageInput);
 ```
 
 ---

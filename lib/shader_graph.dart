@@ -1,16 +1,9 @@
 library shader_graph;
 
-export 'src/extension/dsl.dart';
-export 'src/controller/keyboard_controller.dart';
-export 'src/controller/shader_controller.dart';
-export 'src/foundation/filter_mode.dart';
-export 'src/foundation/wrap_mode.dart';
-
 // import '' is same as import 'shader_graph.dart
 import '';
 import 'package:flutter/foundation.dart';
 import 'src/rendering/animated_sampler.dart';
-import 'src/foundation/shader_input.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -18,6 +11,13 @@ import 'dart:developer';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+export 'src/extension/dsl.dart';
+export 'src/controller/keyboard_controller.dart';
+export 'src/controller/shader_controller.dart';
+export 'src/foundation/filter_mode.dart';
+export 'src/foundation/wrap_mode.dart';
+export 'src/foundation/shader_input.dart';
 
 part 'src/foundation/mouse_data.dart';
 part 'src/foundation/render_data.dart';
