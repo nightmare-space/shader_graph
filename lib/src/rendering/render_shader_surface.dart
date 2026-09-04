@@ -5,6 +5,7 @@ class ShaderSurfaceRenderObject extends MultiChildRenderObjectWidget {
     super.key,
     required this.graph,
     required this.dpr,
+    this.renderFinalPassDirectly = false,
     this.onRenderObjectCreated,
     this.onFramePresented,
     super.children,
@@ -12,12 +13,18 @@ class ShaderSurfaceRenderObject extends MultiChildRenderObjectWidget {
 
   final ShaderGraph graph;
   final double dpr;
+  final bool renderFinalPassDirectly;
   final void Function(RenderShaderSurface renderObject)? onRenderObjectCreated;
   final void Function(int renderedIFrame)? onFramePresented;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
-    final ro = RenderShaderSurface(graph: graph, dpr: dpr, onFramePresented: onFramePresented);
+    final ro = RenderShaderSurface(
+      graph: graph,
+      dpr: dpr,
+      renderFinalPassDirectly: renderFinalPassDirectly,
+      onFramePresented: onFramePresented,
+    );
     onRenderObjectCreated?.call(ro);
     return ro;
   }
@@ -25,6 +32,7 @@ class ShaderSurfaceRenderObject extends MultiChildRenderObjectWidget {
   @override
   void updateRenderObject(BuildContext context, covariant RenderShaderSurface renderObject) {
     renderObject.devicePixelRatio = dpr;
+    renderObject.renderFinalPassDirectly = renderFinalPassDirectly;
     renderObject.onFramePresented = onFramePresented;
     renderObject.graph = graph;
   }
@@ -32,18 +40,17 @@ class ShaderSurfaceRenderObject extends MultiChildRenderObjectWidget {
 
 class _ShaderSurfaceParentData extends ContainerBoxParentData<RenderBox> {}
 
-abstract class _ShaderSurfaceBase extends RenderBox
-    with
-        ContainerRenderObjectMixin<RenderBox, _ShaderSurfaceParentData>,
-        RenderBoxContainerDefaultsMixin<RenderBox, _ShaderSurfaceParentData> {}
+abstract class _ShaderSurfaceBase extends RenderBox with ContainerRenderObjectMixin<RenderBox, _ShaderSurfaceParentData>, RenderBoxContainerDefaultsMixin<RenderBox, _ShaderSurfaceParentData> {}
 
 class RenderShaderSurface extends _ShaderSurfaceBase {
   RenderShaderSurface({
     required ShaderGraph graph,
     required double dpr,
+    bool renderFinalPassDirectly = false,
     void Function(int renderedIFrame)? onFramePresented,
   })  : _graph = graph,
         _devicePixelRatio = dpr,
+        _renderFinalPassDirectly = renderFinalPassDirectly,
         _onFramePresented = onFramePresented;
 
   ShaderGraph _graph;
@@ -57,6 +64,7 @@ class RenderShaderSurface extends _ShaderSurfaceBase {
   double _time = 0.0;
   int _iFrame = 0;
   double _devicePixelRatio;
+  bool _renderFinalPassDirectly;
   IMouse _iMouse = IMouse(0.0, 0.0, -1.0, -1.0);
   void Function(int renderedIFrame)? _onFramePresented;
 
@@ -89,6 +97,12 @@ class RenderShaderSurface extends _ShaderSurfaceBase {
   set devicePixelRatio(double v) {
     if (_devicePixelRatio == v) return;
     _devicePixelRatio = v;
+    markNeedsCompositedLayerUpdate();
+  }
+
+  set renderFinalPassDirectly(bool v) {
+    if (_renderFinalPassDirectly == v) return;
+    _renderFinalPassDirectly = v;
     markNeedsCompositedLayerUpdate();
   }
 
@@ -138,19 +152,28 @@ class RenderShaderSurface extends _ShaderSurfaceBase {
   @override
   ShaderSurfaceLayer updateCompositedLayer({required covariant ShaderSurfaceLayer? oldLayer}) {
     return (oldLayer ?? ShaderSurfaceLayer(_graph))
+      ..graph = _graph
       ..size = size
       ..iFrame = _iFrame
       ..time = _time
       ..devicePixelRatio = _devicePixelRatio
       ..iMouse = _iMouse
+      ..renderFinalPassDirectly = _renderFinalPassDirectly
       ..onFramePresented = _onFramePresented;
   }
 }
 
 class ShaderSurfaceLayer extends OffsetLayer {
-  ShaderSurfaceLayer(this.graph);
+  ShaderSurfaceLayer(this._graph);
 
-  final ShaderGraph graph;
+  ShaderGraph _graph;
+  ShaderGraph get graph => _graph;
+  set graph(ShaderGraph value) {
+    if (identical(_graph, value)) return;
+    _graph = value;
+    _hasPreparedDirectFrame = false;
+    markNeedsAddToScene();
+  }
 
   // 使用 Impeller 渲染，开启同步不会内存泄露，Skia 则会。
   // Using Impeller for rendering, enabling sync won't leak memory, Skia will.
@@ -160,8 +183,17 @@ class ShaderSurfaceLayer extends OffsetLayer {
   double _time = 0.0;
   int _iFrame = 0;
   bool _rendering = false;
+  bool _renderFinalPassDirectly = false;
+  bool _hasPreparedDirectFrame = false;
   IMouse _iMouse = IMouse(0.0, 0.0, -1.0, -1.0);
   void Function(int renderedIFrame)? onFramePresented;
+
+  set renderFinalPassDirectly(bool value) {
+    if (_renderFinalPassDirectly == value) return;
+    _renderFinalPassDirectly = value;
+    _hasPreparedDirectFrame = false;
+    markNeedsAddToScene();
+  }
 
   set iMouse(IMouse v) {
     _iMouse = v;
@@ -208,6 +240,7 @@ class ShaderSurfaceLayer extends OffsetLayer {
     // capture their images before the shader graph renders.
     addChildrenToScene(builder);
 
+    final presentDirectly = _renderFinalPassDirectly && graph._canPresentMainNodeDirectly;
     final img = graph.mainNode._output ?? graph.mainNode._prevOutput;
 
     if (!_rendering) {
@@ -226,7 +259,23 @@ class ShaderSurfaceLayer extends OffsetLayer {
         iMouse: iMouse,
       );
 
-      if (_useSyncRender) {
+      if (presentDirectly) {
+        final isInitialDirectFrame = !_hasPreparedDirectFrame;
+        graph._prepareDirectFrame(data: data).then((_) {
+          _hasPreparedDirectFrame = true;
+          // Bootstrap the first directly presented frame. Later frames are
+          // scheduled by the surface ticker after onFramePresented.
+          if (isInitialDirectFrame) {
+            markNeedsAddToScene();
+          }
+        }).catchError((e, st) {
+          debugPrint('ShaderGraph direct render error: $e');
+          debugPrint('$st');
+        }).whenComplete(() {
+          _rendering = false;
+          onFramePresented?.call(iFrame.toInt());
+        });
+      } else if (_useSyncRender) {
         graph._renderFrameSync(data: data);
         _rendering = false;
         onFramePresented?.call(iFrame.toInt());
@@ -243,6 +292,26 @@ class ShaderSurfaceLayer extends OffsetLayer {
           onFramePresented?.call(iFrame.toInt());
         });
       }
+    }
+
+    if (presentDirectly) {
+      if (!_hasPreparedDirectFrame) return;
+
+      final shader = graph.mainNode._shader;
+      if (shader == null) return;
+
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      canvas.drawRect(
+        Offset.zero & _size,
+        Paint()
+          ..shader = shader
+          ..filterQuality = FilterQuality.none,
+      );
+      final picture = recorder.endRecording();
+      _lastPicture = picture;
+      builder.addPicture(offset, picture);
+      return;
     }
 
     if (img == null) {

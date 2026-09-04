@@ -63,6 +63,7 @@ class ShaderBuffer extends ChangeNotifier {
   bool _readbackInFlight = false;
   bool _isDisposed = false;
   bool get isDisposed => _isDisposed;
+  bool get _requiresOutputReadback => hasListeners || _readbackInFlight;
 
   final List<ShaderInput> _inputs = [];
 
@@ -242,6 +243,18 @@ class ShaderBuffer extends ChangeNotifier {
     _prevOutput = out;
   }
 
+  void _discardOutputs() {
+    final images = Set<ui.Image>.identity();
+    if (_output != null) images.add(_output!);
+    if (_prevOutput != null) images.add(_prevOutput!);
+    for (final image in images) {
+      image.dispose();
+    }
+    _output = null;
+    _prevOutput = null;
+    frameData = null;
+  }
+
   Future<void> _render({required RenderData data}) async {
     if (_shader == null) return;
 
@@ -343,13 +356,18 @@ class ShaderBuffer extends ChangeNotifier {
   }
 
   int index = 0;
-  void renderShader({required RenderData data}) {
+  void renderShader({
+    required RenderData data,
+    Size? renderSizeOverride,
+  }) {
     index = 0;
     // Render target size.
-    final renderSize = fixedOutputSize ?? (data.logicalSize * data.dpr * scale);
+    final renderSize = renderSizeOverride ?? fixedOutputSize ?? (data.logicalSize * data.dpr * scale);
 
     // Uniform space (Shadertoy semantics): iResolution / iMouse coordinate system.
-    final surfaceSize = data.logicalSize * data.dpr * scale;
+    // A directly presented final pass renders in the Flutter canvas' logical
+    // coordinate space, so its target and surface size are both overridden.
+    final surfaceSize = renderSizeOverride ?? (data.logicalSize * data.dpr * scale);
     final uniformSize = useSurfaceSizeForIResolution ? surfaceSize : renderSize;
     Stopwatch stopwatch = Stopwatch()..start();
     _shader!

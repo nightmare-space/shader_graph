@@ -88,6 +88,30 @@ class ShaderGraph {
     return mainNode._output ?? mainNode._prevOutput;
   }
 
+  /// Renders every dependency to its normal offscreen target, then only
+  /// prepares the final shader for direct presentation by the surface layer.
+  ///
+  /// This deliberately skips [ShaderBuffer._render] for [mainNode], avoiding
+  /// the final Picture -> Image conversion while preserving multi-pass inputs.
+  Future<void> _prepareDirectFrame({required RenderData data}) async {
+    // Release a final texture left behind when the presentation mode changes
+    // at runtime. Direct mode never publishes a final image.
+    mainNode._discardOutputs();
+
+    for (final node in _orderedBuffers) {
+      node._beginFrame();
+    }
+    for (final node in _orderedBuffers.take(_orderedBuffers.length - 1)) {
+      await node._render(data: data);
+    }
+
+    // Runtime shaders painted into a Flutter picture use logical coordinates.
+    mainNode.renderShader(
+      data: data,
+      renderSizeOverride: data.logicalSize,
+    );
+  }
+
   void _renderFrameSync({required RenderData data}) {
     // Same as renderFrame(): keep usePreviousFrame stable & order-independent.
     for (final node in _orderedBuffers) {
@@ -99,6 +123,22 @@ class ShaderGraph {
   }
 
   ShaderBuffer get mainNode => _orderedBuffers.last;
+
+  /// Direct presentation cannot provide a texture for feedback, downstream
+  /// sampling, or CPU readback. Fall back to the regular offscreen path when
+  /// the final buffer is used in one of those ways.
+  bool get _canPresentMainNodeDirectly {
+    if (mainNode._requiresOutputReadback) return false;
+
+    for (final node in _orderedBuffers) {
+      for (final input in node._inputs) {
+        if (input is ShaderBufferInput && identical(input.buffer, mainNode)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 
   void dispose() {
     for (final node in _buffers) {

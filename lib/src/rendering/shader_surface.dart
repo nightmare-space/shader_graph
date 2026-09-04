@@ -30,6 +30,7 @@ class ShaderSurface extends StatefulWidget {
     this.keyboardController,
     this.shaderController,
     this.upSideDown = true,
+    this.renderFinalPassDirectly = false,
     this.onLoading,
     super.key,
   });
@@ -58,6 +59,7 @@ class ShaderSurface extends StatefulWidget {
     dynamic param, {
     Key? key,
     bool upSideDown = true,
+    bool renderFinalPassDirectly = false,
     KeyboardController? keyboardController,
     ShaderController? shaderController,
     Widget Function(BuildContext context)? onLoading,
@@ -77,6 +79,7 @@ class ShaderSurface extends StatefulWidget {
       key: key,
       buffers: buffers,
       upSideDown: upSideDown,
+      renderFinalPassDirectly: renderFinalPassDirectly,
       keyboardController: keyboardController,
       shaderController: shaderController,
       onLoading: onLoading,
@@ -102,12 +105,14 @@ class ShaderSurface extends StatefulWidget {
     KeyboardController? keyboardController,
     ShaderController? shaderController,
     bool upSideDown = true,
+    bool renderFinalPassDirectly = false,
   }) {
     final param = builder();
     return ShaderSurface(
       buffers: param,
       key: key,
       upSideDown: upSideDown,
+      renderFinalPassDirectly: renderFinalPassDirectly,
       keyboardController: keyboardController,
       shaderController: shaderController,
     );
@@ -139,6 +144,16 @@ class ShaderSurface extends StatefulWidget {
   /// which causes the displayed shader to be upside down.
   /// Therefore, it is flipped back by default, but some special shaders do not require flipping
   final bool upSideDown;
+
+  /// Paints the graph's final shader directly into the surface picture.
+  ///
+  /// Intermediate buffers still render to [ui.Image] textures, so multi-pass
+  /// graphs continue to work. This only removes the final
+  /// Picture -> Image -> Picture round trip. The regular offscreen path is
+  /// retained when the final buffer is used for feedback or pixel readback.
+  /// The final pass renders at the surface's logical size, so its [ShaderBuffer.scale]
+  /// and [ShaderBuffer.fixedOutputSize] are intentionally ignored.
+  final bool renderFinalPassDirectly;
 
   final Widget Function(BuildContext context)? onLoading;
 
@@ -309,6 +324,7 @@ class _ShaderSurfaceState extends State<ShaderSurface> with SingleTickerProvider
             child: ShaderSurfaceRenderObject(
               graph: graph,
               dpr: MediaQuery.devicePixelRatioOf(context),
+              renderFinalPassDirectly: widget.renderFinalPassDirectly,
               onRenderObjectCreated: (ro) {
                 renderObject = ro;
                 // Start at frame 0; subsequent frames advance only when a render completes.
